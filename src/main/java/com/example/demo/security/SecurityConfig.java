@@ -1,7 +1,5 @@
 package com.example.demo.security;
 
-import com.example.demo.security.JwtFilter;
-
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.context.annotation.Bean;
@@ -55,7 +53,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers(
-                                "/api/auth/**"
+                                "/api/auth/**",
+                                "/email/**",
+                                "/cart/**",
+                                "/orders/**",
+                                "/payments/**",
+                                "/products/**"
                         ).permitAll()
 
                         .anyRequest().authenticated()
