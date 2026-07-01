@@ -7,6 +7,14 @@ import CartSidebar from "../components/CartSidebar";
 import { useCart } from "../context/CartContext";
 import { PRODUCTS } from "../data/data";
 import API from "../api/api";
+import { getDynamicHomeSections, rankProducts } from "../utils/personalization";
+
+const FALLBACK_IMAGES = {
+  mobiles: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=700&q=80",
+  electronics: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=700&q=80",
+  fashion: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=700&q=80",
+  home: "https://images.unsplash.com/photo-1580480055273-228ff5388ef8?w=700&q=80",
+};
 
 export default function HomePage() {
   const [filter, setFilter] = useState("all");
@@ -21,7 +29,7 @@ export default function HomePage() {
         const res = await API.get("/products");
 
         if (Array.isArray(res.data) && res.data.length > 0) {
-          setProducts(res.data);
+          setProducts(mergeProductCatalog(res.data));
         } else {
           setProducts(PRODUCTS);
         }
@@ -36,7 +44,7 @@ export default function HomePage() {
     fetchProducts();
   }, []);
 
-  const filteredProducts = products.filter((product) => {
+  const filteredProducts = rankProducts(products.filter((product) => {
     const productBadge = product.badge?.toLowerCase();
     const productCategory = product.category?.toLowerCase();
 
@@ -51,12 +59,15 @@ export default function HomePage() {
         ? productBadge === "hot"
         : productCategory === filter;
 
+    const query = search.toLowerCase();
     const matchSearch =
-      product.name.toLowerCase().includes(search.toLowerCase()) ||
-      product.brand.toLowerCase().includes(search.toLowerCase());
+      product.name.toLowerCase().includes(query) ||
+      product.brand.toLowerCase().includes(query);
 
     return matchCategory && matchSearch;
-  });
+  }), search);
+  const dynamicSections = getDynamicHomeSections(products);
+  const showDynamicSections = !loading && !search && filter === "all";
 
   return (
     <div style={{ background: "#0A0A0A", minHeight: "100vh", color: "white" }}>
@@ -75,14 +86,16 @@ export default function HomePage() {
           boxSizing: "border-box",
         }}
       >
-        <h1 style={{ color: "#4f83ff", fontSize: "35px", margin: 0 }}>
-          Nexora 🚀
-        </h1>
+        <Link to="/" style={brandLinkStyle} aria-label="Nexora home">
+          <span style={brandWordStyle}>Nexora</span>
+          <span style={brandSmileStyle} />
+        </Link>
 
         <div style={{ display: "flex", gap: "30px", alignItems: "center" }}>
           <Link to="/" style={navLinkStyle}>Home</Link>
           <Link to="/products" style={navLinkStyle}>Products</Link>
           <Link to="/orders" style={navLinkStyle}>Orders</Link>
+          <Link to="/admin" style={navLinkStyle}>Admin</Link>
 
           <button
             onClick={() => setCartOpen(true)}
@@ -151,29 +164,117 @@ export default function HomePage() {
           )}
 
           {!loading && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                gap: "25px",
-              }}
-            >
-                            {filteredProducts.map((product) => (
-                              <ProductCard key={product.id} product={product} />
-                            ))}
-                          </div>
-                        )}
-                      </div>
+            <>
+              {showDynamicSections && dynamicSections.map((section) => (
+                <section key={section.title} style={{ marginBottom: "32px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "18px", alignItems: "end", marginBottom: "14px" }}>
+                    <div>
+                      <h2 style={{ color: "#f8fafc", fontSize: "24px", margin: "0 0 5px" }}>
+                        {section.title}
+                      </h2>
+                      <p style={{ color: "#94a3b8", margin: 0, fontSize: "13px" }}>
+                        {section.subtitle}
+                      </p>
                     </div>
-
-                    <Cart />
-                    <CartSidebar />
+                    <Link to="/products" style={{ color: "#facc15", textDecoration: "none", fontWeight: "bold" }}>
+                      View all
+                    </Link>
                   </div>
-                );
-              }
+                  <div style={homeSectionGridStyle}>
+                    {section.products.map((product) => (
+                      <ProductCard key={`${section.title}-${product.id}`} product={product} />
+                    ))}
+                  </div>
+                </section>
+              ))}
 
-              const navLinkStyle = {
-                color: "white",
-                textDecoration: "none",
-                fontSize: "18px",
-              };
+              <h2 style={{ color: "#C9A84C", fontSize: "24px", margin: "8px 0 18px" }}>
+                {search ? "Personalized Search Results" : "Explore Nexora"}
+              </h2>
+              <div style={productGridStyle}>
+                {filteredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <Cart />
+      <CartSidebar />
+    </div>
+  );
+}
+
+function normalizeProduct(product) {
+  const match = PRODUCTS.find((item) => item.name.toLowerCase() === product.name.toLowerCase());
+  const category = String(product.categoryName || match?.category || "all").toLowerCase();
+  const image = product.imageUrl || match?.image || FALLBACK_IMAGES[category] || FALLBACK_IMAGES.electronics;
+
+  return {
+    ...match,
+    ...product,
+    brand: match?.brand || product.categoryName || "Nexora",
+    category,
+    badge: match?.badge || (Number(product.stockQuantity) <= 5 ? "hot" : "new"),
+    image,
+    imageUrl: image,
+    rating: match?.rating || 4.4,
+    reviews: match?.reviews || 1200 + Number(product.id || 0) * 47,
+    mrp: match?.mrp || Math.round(Number(product.price) * 1.18),
+    sizes: match?.sizes || ["One Size"],
+    delivery: match?.delivery || "Fast delivery available",
+    offer: match?.offer || "Nexora verified catalog item",
+  };
+}
+
+function mergeProductCatalog(apiProducts) {
+  const normalized = apiProducts.map(normalizeProduct);
+  const apiNames = new Set(normalized.map((product) => product.name.toLowerCase()));
+  const localOnlyProducts = PRODUCTS.filter((product) => !apiNames.has(product.name.toLowerCase()));
+
+  return [...normalized, ...localOnlyProducts];
+}
+
+const productGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+  gap: "25px",
+};
+
+const homeSectionGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+  gap: "16px",
+};
+
+const navLinkStyle = {
+  color: "white",
+  textDecoration: "none",
+  fontSize: "18px",
+};
+
+const brandLinkStyle = {
+  display: "inline-flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  textDecoration: "none",
+  lineHeight: 1,
+};
+
+const brandWordStyle = {
+  color: "#4f83ff",
+  fontSize: "35px",
+  fontWeight: 800,
+  letterSpacing: "0",
+  fontFamily: "Georgia, 'Times New Roman', serif",
+};
+
+const brandSmileStyle = {
+  width: "74px",
+  height: "5px",
+  borderBottom: "3px solid #f59e0b",
+  borderRadius: "0 0 999px 999px",
+  transform: "translate(28px, -1px) rotate(-2deg)",
+};

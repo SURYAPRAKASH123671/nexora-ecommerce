@@ -1,50 +1,95 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import API from "../api/api";
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  const [forgotMode, setForgotMode] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
-  const handleSubmit = async () => {
+  useEffect(() => {
+    if (searchParams.get("verified") === "true") {
+      setNotice("Email verified successfully. Login to continue shopping.");
+    }
+  }, [searchParams]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError("");
+    setNotice("");
     setLoading(true);
 
-    const url = isRegister
-      ? "http://localhost:8080/api/auth/register"
-      : "http://localhost:8080/api/auth/login";
-
-    const body = isRegister
-      ? { name, email, password }
-      : { email, password };
-
     try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Something went wrong");
-        setLoading(false);
+      if (forgotMode) {
+        const response = await API.post("/auth/forgot-password", { email });
+        setNotice(response.data?.message || "If an account exists, a reset link has been sent.");
+        setPassword("");
         return;
       }
 
-      // Save token and user info
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify({ name: data.name, email: data.email }));
+      if (isRegister) {
+        const response = await API.post("/auth/signup", {
+          name,
+          email,
+          password,
+        });
 
-      navigate("/");
+        if (response.data?.token) {
+          persistSession(response.data);
+          navigate(destinationFor(response.data.user));
+          return;
+        }
+
+        setNotice(response.data?.message || "Account created. Check your email to verify your account.");
+        setIsRegister(false);
+        setPassword("");
+        return;
+      }
+
+      const response = await API.post("/auth/login", {
+        email,
+        password,
+        rememberMe,
+      });
+
+      persistSession(response.data);
+      navigate(destinationFor(response.data.user));
     } catch (err) {
-      setError("Cannot connect to server. Make sure backend is running.");
+      const message =
+        err.response?.data?.message ||
+        "Cannot connect to server. Make sure backend is running.";
+      setError(message);
+    } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email.trim()) {
+      setError("Enter your email first, then resend verification.");
+      return;
+    }
+
+    setError("");
+    setNotice("");
+    setResending(true);
+
+    try {
+      const response = await API.post("/auth/resend-verification", { email });
+      setNotice(response.data?.message || "Verification email sent.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not resend verification email.");
+    } finally {
+      setResending(false);
     }
   };
 
@@ -62,38 +107,46 @@ export default function Login() {
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#0A0A0A",
-      color: "white",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-    }}>
-      <div style={{
-        width: "380px",
-        background: "#141414",
-        padding: "40px",
-        borderRadius: "12px",
-        border: "1px solid #222",
-      }}>
-
-        {/* Logo */}
-        <h1 style={{ color: "#C9A84C", marginBottom: "8px", fontSize: "28px" }}>
-          Nexora 🚀
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#0A0A0A",
+        color: "white",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "24px",
+        boxSizing: "border-box",
+      }}
+    >
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          width: "400px",
+          maxWidth: "100%",
+          background: "#141414",
+          padding: "38px",
+          borderRadius: "10px",
+          border: "1px solid #222",
+          boxSizing: "border-box",
+        }}
+      >
+        <h1 style={{ color: "#4f83ff", marginBottom: "8px", fontSize: "30px" }}>
+          Nexora
         </h1>
-        <p style={{ color: "#aaa", marginBottom: "28px", fontSize: "14px" }}>
-          {isRegister ? "Create your account" : "Welcome back"}
+        <p style={{ color: "#aaa", marginBottom: "26px", fontSize: "14px" }}>
+          {forgotMode ? "Reset access" : isRegister ? "Create your account" : "Welcome back"}
         </p>
 
-        {/* Name field (register only) */}
-        {isRegister && (
+        {isRegister && !forgotMode && (
           <input
             type="text"
-            placeholder="Full Name"
+            placeholder="Full name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(event) => setName(event.target.value)}
             style={inputStyle}
+            autoComplete="name"
+            required
           />
         )}
 
@@ -101,57 +154,155 @@ export default function Login() {
           type="email"
           placeholder="Email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(event) => setEmail(event.target.value)}
           style={inputStyle}
+          autoComplete="email"
+          required
         />
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={inputStyle}
-        />
+        {!forgotMode && (
+          <input
+            type="password"
+            placeholder={isRegister ? "Password with letters and numbers" : "Password"}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            style={inputStyle}
+            autoComplete={isRegister ? "new-password" : "current-password"}
+            required
+          />
+        )}
 
-        {/* Error message */}
+        {!isRegister && !forgotMode && (
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              color: "#cbd5e1",
+              fontSize: "13px",
+              marginTop: "14px",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.target.checked)}
+            />
+            Remember me
+          </label>
+        )}
+
+        {notice && (
+          <p style={{ color: "#4ade80", fontSize: "13px", marginTop: "14px", lineHeight: 1.5 }}>
+            {notice}
+          </p>
+        )}
+
         {error && (
-          <p style={{ color: "#e53e3e", fontSize: "13px", marginTop: "12px" }}>
+          <p style={{ color: "#f87171", fontSize: "13px", marginTop: "14px", lineHeight: 1.5 }}>
             {error}
           </p>
         )}
 
-        {/* Submit button */}
         <button
-          onClick={handleSubmit}
+          type="submit"
           disabled={loading}
           style={{
             width: "100%",
             padding: "14px",
             marginTop: "20px",
-            background: loading ? "#888" : "#C9A84C",
+            background: loading ? "#64748b" : "#2563eb",
             border: "none",
             borderRadius: "8px",
             cursor: loading ? "not-allowed" : "pointer",
             fontWeight: "bold",
             fontSize: "15px",
-            color: "black",
+            color: "white",
           }}
         >
-          {loading ? "Please wait..." : isRegister ? "Register" : "Login"}
+          {loading ? "Please wait..." : forgotMode ? "Send reset link" : isRegister ? "Create account" : "Login"}
         </button>
 
-        {/* Toggle */}
-        <p style={{ textAlign: "center", marginTop: "20px", color: "#aaa", fontSize: "13px" }}>
-          {isRegister ? "Already have an account?" : "Don't have an account?"}
-          <span
-            onClick={() => { setIsRegister(!isRegister); setError(""); }}
-            style={{ color: "#C9A84C", cursor: "pointer", marginLeft: "6px" }}
+        {!isRegister && !forgotMode && (
+          <button
+            type="button"
+            onClick={handleResendVerification}
+            disabled={resending}
+            style={{
+              width: "100%",
+              padding: "12px",
+              marginTop: "12px",
+              background: "transparent",
+              border: "1px solid #334155",
+              borderRadius: "8px",
+              color: "#cbd5e1",
+              cursor: resending ? "not-allowed" : "pointer",
+            }}
           >
-            {isRegister ? "Login" : "Register"}
-          </span>
-        </p>
+            {resending ? "Sending..." : "Resend verification email"}
+          </button>
+        )}
 
-      </div>
+        {!isRegister && !forgotMode && (
+          <button
+            type="button"
+            onClick={() => {
+              setForgotMode(true);
+              setError("");
+              setNotice("");
+              setPassword("");
+            }}
+            style={{
+              width: "100%",
+              marginTop: "12px",
+              background: "none",
+              border: "none",
+              color: "#93c5fd",
+              cursor: "pointer",
+              fontSize: "13px",
+            }}
+          >
+            Forgot password?
+          </button>
+        )}
+
+        <p style={{ textAlign: "center", marginTop: "20px", color: "#aaa", fontSize: "13px" }}>
+          {forgotMode ? "Remember your password?" : isRegister ? "Already have an account?" : "Don't have an account?"}
+          <button
+            type="button"
+            onClick={() => {
+              if (forgotMode) {
+                setForgotMode(false);
+                setIsRegister(false);
+              } else {
+                setIsRegister(!isRegister);
+              }
+              setError("");
+              setNotice("");
+            }}
+            style={{
+              color: "#4f83ff",
+              cursor: "pointer",
+              marginLeft: "6px",
+              background: "none",
+              border: "none",
+              padding: 0,
+              font: "inherit",
+            }}
+          >
+            {forgotMode ? "Login" : isRegister ? "Login" : "Sign up"}
+          </button>
+        </p>
+      </form>
     </div>
   );
+}
+
+function persistSession(data) {
+  localStorage.setItem("token", data.token);
+  localStorage.setItem("user", JSON.stringify(data.user));
+}
+
+function destinationFor(user) {
+  return user?.role === "ROLE_ADMIN" ? "/admin" : "/";
 }

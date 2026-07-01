@@ -1,6 +1,7 @@
 import React from "react";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
+import { trackProductSignal } from "../utils/personalization";
 
 export default function ProductCard({ product }) {
   const {
@@ -25,6 +26,26 @@ export default function ProductCard({ product }) {
     setCartOpen(true);
   };
 
+  const handleProductOpen = () => {
+    trackProductSignal(product, "click");
+    navigate(`/product/${product.id}`);
+  };
+
+  const handleAddToCart = () => {
+    addToCart(product, sizes[0]);
+  };
+
+  const handleWishlist = () => {
+    toggleWishlist(product.id);
+    trackProductSignal(product, "wishlist");
+  };
+
+  const handleImageError = (event) => {
+    if (product.fallbackImage && event.currentTarget.src !== product.fallbackImage) {
+      event.currentTarget.src = product.fallbackImage;
+    }
+  };
+
   return (
     <div
       style={{
@@ -37,7 +58,7 @@ export default function ProductCard({ product }) {
       }}
     >
       <div
-        onClick={() => navigate(`/product/${product.id}`)}
+        onClick={handleProductOpen}
         style={{ width: "100%", height: "210px", overflow: "hidden", background: "#f8fafc", position: "relative" }}
       >
         {badge && (
@@ -69,6 +90,7 @@ export default function ProductCard({ product }) {
         <img
           src={image}
           alt={product.name}
+          onError={handleImageError}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
       </div>
@@ -79,7 +101,7 @@ export default function ProductCard({ product }) {
         </p>
 
         <h3
-          onClick={() => navigate(`/product/${product.id}`)}
+          onClick={handleProductOpen}
           style={{
             color: "white",
             fontSize: "15px",
@@ -120,13 +142,16 @@ export default function ProductCard({ product }) {
 
         <p style={deliveryStyle}>{product.delivery || "Fast delivery available"}</p>
         <p style={offerStyle}>{product.offer || "Limited time offer"}</p>
+        {product.specs?.length > 0 && (
+          <p style={specSnippetStyle}>{product.specs.slice(0, 2).join(" • ")}</p>
+        )}
         <p style={reviewSnippetStyle}>
-          "Top rated by verified buyers"
+          "{product.reviewSnippet || "Top rated by verified buyers"}"
         </p>
 
         <div style={{ display: "flex", gap: "8px" }}>
           <button
-            onClick={() => addToCart(product, sizes[0])}
+            onClick={handleAddToCart}
             style={{
               flex: 1,
               background: "#facc15",
@@ -142,7 +167,7 @@ export default function ProductCard({ product }) {
           </button>
 
           <button
-            onClick={() => toggleWishlist(product.id)}
+            onClick={handleWishlist}
             style={{
               background: isWishlisted(product.id) ? "#e53e3e" : "#2a2a2a",
               color: "white",
@@ -215,6 +240,14 @@ const reviewSnippetStyle = {
   fontSize: "12px",
   margin: "0 0 12px",
   minHeight: "16px",
+};
+
+const specSnippetStyle = {
+  color: "#93c5fd",
+  fontSize: "12px",
+  lineHeight: 1.45,
+  margin: "0 0 6px",
+  minHeight: "34px",
 };
 
 const buyNowStyle = {

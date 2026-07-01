@@ -1,12 +1,17 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   PAYMENT_METHODS,
   useCart,
   formatPrice,
+  getPaymentMethod,
 } from "../context/CartContext";
 import API from "../api/api";
+import { PRODUCTS } from "../data/data";
+import { trackOrderItems } from "../utils/personalization";
 
 export default function Cart() {
+  const navigate = useNavigate();
   const [paymentMethod, setPaymentMethod] = React.useState("cod");
   const [address, setAddress] = React.useState({
     fullName: "",
@@ -31,7 +36,7 @@ export default function Cart() {
     total,
     removeFromCart,
     changeQty,
-    placeOrder,
+    clearCart,
   } = useCart();
 
   if (!cartOpen) return null;
@@ -84,71 +89,6 @@ export default function Cart() {
     return true;
   };
 
-  const buildOrderEmail = (deliveryAddress) => {
-    const itemRows = cartItems
-      .map(
-        (item) => `
-          <tr>
-            <td style="padding:8px;border-bottom:1px solid #eee;">${item.name} x${item.qty}</td>
-            <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${formatPrice(item.price * item.qty)}</td>
-          </tr>
-        `
-      )
-      .join("");
-
-    const paymentLabel =
-      PAYMENT_METHODS.find((method) => method.id === paymentMethod)?.label ||
-      "Cash on Delivery";
-
-    return `
-      <div style="font-family:Arial,sans-serif;color:#111;line-height:1.5;">
-        <h2 style="color:#0b1120;">Thanks for your order, ${deliveryAddress.fullName}!</h2>
-        <p>Your Nexora order has been placed successfully.</p>
-        <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-          ${itemRows}
-          <tr>
-            <td style="padding:8px;font-weight:bold;">Subtotal</td>
-            <td style="padding:8px;text-align:right;">${formatPrice(subtotal)}</td>
-          </tr>
-          <tr>
-            <td style="padding:8px;font-weight:bold;">GST</td>
-            <td style="padding:8px;text-align:right;">${formatPrice(gst)}</td>
-          </tr>
-          <tr>
-            <td style="padding:8px;font-weight:bold;">Shipping</td>
-            <td style="padding:8px;text-align:right;">${shipping === 0 ? "FREE" : formatPrice(shipping)}</td>
-          </tr>
-          <tr>
-            <td style="padding:8px;font-size:18px;font-weight:bold;">Total</td>
-            <td style="padding:8px;text-align:right;font-size:18px;font-weight:bold;">${formatPrice(total)}</td>
-          </tr>
-        </table>
-        <p><strong>Payment:</strong> ${paymentLabel}</p>
-        <p><strong>Delivery address:</strong><br />
-          ${deliveryAddress.line1}${deliveryAddress.line2 ? ", " + deliveryAddress.line2 : ""}<br />
-          ${deliveryAddress.city}, ${deliveryAddress.state} - ${deliveryAddress.pincode}<br />
-          Mobile: ${deliveryAddress.phone}
-        </p>
-        <p style="color:#555;">We will notify you when your order is shipped.</p>
-      </div>
-    `;
-  };
-
-  const sendCustomerEmail = async (deliveryAddress) => {
-    const response = await API.post("/email/send", {
-      toEmail: deliveryAddress.email,
-      subject: "Nexora order confirmation",
-      body: buildOrderEmail(deliveryAddress),
-      html: true,
-    });
-
-    if (!response.data?.success) {
-      throw new Error(response.data?.message || "Email send failed");
-    }
-
-    return response.data;
-  };
-
   const handlePlaceOrder = async () => {
     if (!validateAddress()) return;
 
@@ -163,18 +103,39 @@ export default function Cart() {
       pincode: address.pincode.trim(),
     };
 
-    placeOrder(paymentMethod, deliveryAddress);
+    const method = getPaymentMethod(paymentMethod);
+    const payload = {
+      paymentMethod: method.label,
+      paymentStatus: method.id === "cod" ? "Pay on delivery" : "Payment pending",
+      deliveryAddress,
+      items: cartItems.map((item) => ({
+        productId: Number.isFinite(Number(item.id)) ? Number(item.id) : null,
+        productName: item.name,
+        brand: item.brand || "",
+        variant: item.selectedSize ? `Size: ${item.selectedSize}` : "",
+        imageUrl: resolveOrderImageUrl(item),
+        quantity: item.qty,
+        unitPrice: item.price,
+      })),
+      subtotal,
+      gst,
+      shipping,
+      total,
+    };
 
     try {
-      await sendCustomerEmail(deliveryAddress);
-      alert("Order placed successfully! Confirmation email sent.");
+      const response = await API.post("/orders", payload);
+      trackOrderItems(cartItems);
+      clearCart();
+      alert(orderSuccessMessage(response.data));
     } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Email could not be sent.";
-
-      alert(`Order placed successfully! ${message}`);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        alert("Please login before placing your order.");
+        navigate("/login");
+        return;
+      }
+      alert(error.response?.data?.message || "Order could not be placed. Please try again.");
+      return;
     }
 
     setCartOpen(false);
@@ -383,6 +344,34 @@ export default function Cart() {
     </div>
   );
 }
+
+const resolveOrderImageUrl = (item) => {
+  if (item.image || item.imageUrl) {
+    return item.image || item.imageUrl;
+  }
+
+  const catalogProduct = PRODUCTS.find(
+    (product) => String(product.id) === String(item.id)
+  );
+
+  return catalogProduct?.image || catalogProduct?.imageUrl || "";
+};
+
+const orderSuccessMessage = (order) => {
+  if (order.confirmationEmailStatus === "SENT") {
+    return `Order ${order.orderNumber} placed successfully! Confirmation email sent.`;
+  }
+
+  if (order.confirmationEmailStatus === "FAILED") {
+    return `Order ${order.orderNumber} placed successfully, but confirmation email could not be sent. Check SMTP settings.`;
+  }
+
+  if (order.confirmationEmailStatus === "SKIPPED") {
+    return `Order ${order.orderNumber} placed successfully. Email sending is disabled in this environment.`;
+  }
+
+  return `Order ${order.orderNumber} placed successfully.`;
+};
 
 const qtyBtnStyle = {
   width: "30px",

@@ -4,6 +4,7 @@ import React, {
   useReducer,
   useState,
 } from "react";
+import { trackOrderItems, trackProductSignal } from "../utils/personalization";
 
 const CartContext = createContext();
 
@@ -165,6 +166,7 @@ export const CartProvider = ({
     product,
     size
   ) => {
+    trackProductSignal(product, "cart");
 
     dispatch({
       type: "ADD_ITEM",
@@ -267,7 +269,7 @@ export const CartProvider = ({
       getPaymentMethod(paymentMethodId);
 
     const order = {
-      id: Date.now(),
+      id: `NX${Date.now().toString(36).toUpperCase()}`,
       date: new Date().toLocaleString("en-IN"),
       items: cartItems,
       deliveryAddress,
@@ -287,7 +289,11 @@ export const CartProvider = ({
       order,
     });
 
+    trackOrderItems(cartItems);
+
     clearCart();
+
+    return order;
   };
 
   return (

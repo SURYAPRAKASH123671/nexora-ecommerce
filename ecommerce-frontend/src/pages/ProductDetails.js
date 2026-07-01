@@ -2,11 +2,25 @@ import React from "react";
 import { useParams } from "react-router-dom";
 import { PRODUCTS } from "../data/data";
 import { useCart } from "../context/CartContext";
+import ProductCard from "../components/ProductCard";
+import {
+  getFrequentlyBoughtTogether,
+  getRecommendations,
+  getRecentlyViewedProducts,
+  getSimilarProducts,
+  trackProductSignal,
+} from "../utils/personalization";
 
 export default function ProductDetails() {
   const { id } = useParams();
   const product = PRODUCTS.find((p) => p.id === parseInt(id));
   const { addToCart, setCartOpen, formatPrice } = useCart();
+
+  React.useEffect(() => {
+    if (product) {
+      trackProductSignal(product, "view");
+    }
+  }, [product]);
 
   if (!product) {
     return (
@@ -28,6 +42,10 @@ export default function ProductDetails() {
 
   const sizes = product.sizes || ["One Size"];
   const reviews = product.customerReviews || getDefaultReviews(product);
+  const youMayLike = getRecommendations(PRODUCTS, product, 4);
+  const similarProducts = getSimilarProducts(PRODUCTS, product, 4);
+  const bundleProducts = getFrequentlyBoughtTogether(PRODUCTS, product, 3);
+  const recentlyViewed = getRecentlyViewedProducts(PRODUCTS, 4).filter((item) => item.id !== product.id);
   const discount = product.mrp
     ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
     : 0;
@@ -39,6 +57,12 @@ export default function ProductDetails() {
   const handleBuyNow = () => {
     addToCart(product, sizes[0]);
     setCartOpen(true);
+  };
+
+  const handleImageError = (event) => {
+    if (product.fallbackImage && event.currentTarget.src !== product.fallbackImage) {
+      event.currentTarget.src = product.fallbackImage;
+    }
   };
 
   return (
@@ -57,6 +81,7 @@ export default function ProductDetails() {
           <img
             src={product.image}
             alt={product.name}
+            onError={handleImageError}
             style={imageStyle}
           />
         </div>
@@ -98,6 +123,13 @@ export default function ProductDetails() {
           <p style={descriptionStyle}>
             {product.description || "No description available."}
           </p>
+
+          <h3 style={sectionTitleStyle}>Key specifications</h3>
+          <ul style={specListStyle}>
+            {(product.specs || []).map((spec) => (
+              <li key={spec}>{spec}</li>
+            ))}
+          </ul>
         </div>
 
         <aside style={buyBoxStyle}>
@@ -115,6 +147,14 @@ export default function ProductDetails() {
       </div>
 
       <section style={reviewsSectionStyle}>
+        <RecommendationRail title="You may also like" products={youMayLike} />
+        <RecommendationRail
+          title={product.category === "automotive" ? "Similar performance cars" : "Similar picks"}
+          products={similarProducts}
+        />
+        <RecommendationRail title="Frequently bought together" products={bundleProducts} />
+        <RecommendationRail title="Recently viewed" products={recentlyViewed} />
+
         <h2 style={{ marginTop: 0 }}>Customer Reviews</h2>
         <div style={reviewSummaryStyle}>
           <span style={ratingPillStyle}>{product.rating.toFixed(1)} ★</span>
@@ -123,11 +163,16 @@ export default function ProductDetails() {
 
         <div style={reviewsGridStyle}>
           {reviews.map((review) => (
-            <div key={review.name} style={reviewCardStyle}>
-              <strong>{review.name}</strong>
+            <div key={`${review.name}-${review.title || review.comment}`} style={reviewCardStyle}>
+              <div style={reviewHeaderStyle}>
+                <strong>{review.name}</strong>
+                {review.location && <span>{review.location}</span>}
+              </div>
+              {review.title && <h3 style={reviewTitleStyle}>{review.title}</h3>}
               <p style={{ color: "#facc15", margin: "8px 0 6px" }}>
                 {"★".repeat(review.rating)}
               </p>
+              {review.date && <p style={reviewMetaStyle}>{review.date}</p>}
               <p style={{ color: "#ddd", margin: 0, lineHeight: 1.5 }}>
                 {review.comment}
               </p>
@@ -139,21 +184,47 @@ export default function ProductDetails() {
   );
 }
 
+function RecommendationRail({ title, products }) {
+  if (!products.length) return null;
+
+  return (
+    <div style={{ marginBottom: "28px" }}>
+      <h2 style={{ margin: "0 0 14px", color: "#f8fafc", fontSize: "22px" }}>
+        {title}
+      </h2>
+      <div style={recommendationGridStyle}>
+        {products.map((item) => (
+          <ProductCard key={`${title}-${item.id}`} product={item} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const getDefaultReviews = (product) => [
   {
     name: "Verified Buyer",
+    location: "Chennai",
+    date: "Verified purchase",
     rating: 5,
-    comment: `${product.name} feels worth the price. Packaging was neat and delivery was quick.`,
+    title: "Worth the price",
+    comment: `${product.name} feels worth the price. Packaging was neat, delivery was quick, and the listing details matched what arrived.`,
   },
   {
     name: "Nexora Customer",
+    location: "Bengaluru",
+    date: "Reviewed after 2 weeks",
     rating: 4,
-    comment: "Good quality overall. The product matched the listing and worked well from day one.",
+    title: "Good quality overall",
+    comment: "The product matched the listing and worked well from day one. I would still suggest checking the exact variant before ordering.",
   },
   {
     name: "Recent Buyer",
+    location: "Hyderabad",
+    date: "Recent buyer",
     rating: 4,
-    comment: "Nice deal for the price. Would recommend checking the size/specification before ordering.",
+    title: "Nice offer deal",
+    comment: "Nice deal for the price. Delivery updates were clear and the product looked close to the photos shown on the site.",
   },
 ];
 
@@ -262,6 +333,13 @@ const descriptionStyle = {
   margin: 0,
 };
 
+const specListStyle = {
+  color: "#d7d7d7",
+  lineHeight: 1.7,
+  margin: "0 0 4px",
+  paddingLeft: "20px",
+};
+
 const buyBoxStyle = {
   border: "1px solid #333",
   borderRadius: "8px",
@@ -307,6 +385,12 @@ const reviewsSectionStyle = {
   paddingTop: "24px",
 };
 
+const recommendationGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: "14px",
+};
+
 const reviewSummaryStyle = {
   display: "flex",
   alignItems: "center",
@@ -325,4 +409,24 @@ const reviewCardStyle = {
   border: "1px solid #2a2a2a",
   borderRadius: "8px",
   padding: "14px",
+};
+
+const reviewHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: "12px",
+  color: "#f8fafc",
+  fontSize: "14px",
+};
+
+const reviewTitleStyle = {
+  color: "white",
+  fontSize: "16px",
+  margin: "10px 0 0",
+};
+
+const reviewMetaStyle = {
+  color: "#9ca3af",
+  fontSize: "12px",
+  margin: "0 0 8px",
 };

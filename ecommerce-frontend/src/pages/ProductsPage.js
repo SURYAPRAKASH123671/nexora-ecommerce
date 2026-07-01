@@ -6,6 +6,7 @@ import Cart from "../components/Cart";
 import CartSidebar from "../components/CartSidebar";
 import { useCart } from "../context/CartContext";
 import { PRODUCTS } from "../data/data";
+import { rankProducts } from "../utils/personalization";
 
 export default function ProductsPage() {
   const [filter, setFilter] = useState("all");
@@ -20,7 +21,7 @@ export default function ProductsPage() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const filteredProducts = PRODUCTS.filter((product) => {
+  const filteredProducts = rankProducts(PRODUCTS.filter((product) => {
     const productBadge = product.badge?.toLowerCase();
     const productCategory = product.category?.toLowerCase();
 
@@ -40,7 +41,7 @@ export default function ProductsPage() {
       product.brand.toLowerCase().includes(search.toLowerCase());
 
     return matchCategory && matchSearch;
-  });
+  }), search);
 
   return (
     <div style={{ background: "#0A0A0A", minHeight: "100vh", color: "white" }}>
@@ -69,9 +70,20 @@ export default function ProductsPage() {
             width: "100%",
           }}
         >
-          <h1 style={{ color: "#4f83ff", fontSize: isMobile ? "24px" : "35px", margin: 0 }}>
-            Nexora 🚀
-          </h1>
+          <Link to="/" style={brandLinkStyle} aria-label="Nexora home">
+            <span style={{ ...brandWordStyle, fontSize: isMobile ? "24px" : "35px" }}>
+              Nexora
+            </span>
+            <span
+              style={{
+                ...brandSmileStyle,
+                width: isMobile ? "52px" : "74px",
+                transform: isMobile
+                  ? "translate(20px, -1px) rotate(-2deg)"
+                  : "translate(28px, -1px) rotate(-2deg)",
+              }}
+            />
+          </Link>
 
           {isMobile ? (
             <div style={{ display: "flex", gap: "18px", alignItems: "center" }}>
@@ -192,7 +204,7 @@ export default function ProductsPage() {
                 margin: "0 0 25px",
               }}
             >
-              All Products
+              {search ? "Personalized Search Results" : "All Products"}
             </h2>
           )}
 
@@ -222,4 +234,25 @@ const navLinkStyle = {
   color: "white",
   textDecoration: "none",
   fontSize: "18px",
+};
+
+const brandLinkStyle = {
+  display: "inline-flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  textDecoration: "none",
+  lineHeight: 1,
+};
+
+const brandWordStyle = {
+  color: "#4f83ff",
+  fontWeight: 800,
+  letterSpacing: "0",
+  fontFamily: "Georgia, 'Times New Roman', serif",
+};
+
+const brandSmileStyle = {
+  height: "5px",
+  borderBottom: "3px solid #f59e0b",
+  borderRadius: "0 0 999px 999px",
 };
