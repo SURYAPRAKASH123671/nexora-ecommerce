@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api/api";
 
@@ -26,7 +26,7 @@ export default function Profile() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     setLoading(true);
     setError("");
 
@@ -47,11 +47,11 @@ export default function Profile() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
 
   useEffect(() => {
     loadProfile();
-  }, []);
+  }, [loadProfile]);
 
   const saveProfile = async (event) => {
     event.preventDefault();

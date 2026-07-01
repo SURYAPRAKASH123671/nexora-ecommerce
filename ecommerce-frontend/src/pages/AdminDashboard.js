@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api/api";
 
@@ -25,7 +25,7 @@ export default function AdminDashboard() {
     categoryId: "",
   });
 
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -45,13 +45,13 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
 
   useEffect(() => {
     loadDashboard();
-  }, []);
+  }, [loadDashboard]);
 
-  const products = dashboard?.products || [];
+  const products = useMemo(() => dashboard?.products || [], [dashboard]);
   const categories = dashboard?.categories || [];
   const recentOrders = dashboard?.recentOrders || [];
   const summary = dashboard?.summary || {};

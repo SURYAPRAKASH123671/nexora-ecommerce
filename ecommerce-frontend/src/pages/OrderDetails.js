@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import API from "../api/api";
 import { formatPrice } from "../context/CartContext";
@@ -9,7 +9,7 @@ export default function OrderDetails() {
   const [order, setOrder] = useState(null);
   const [error, setError] = useState("");
 
-  const loadOrder = async () => {
+  const loadOrder = useCallback(async () => {
     try {
       const response = await API.get(`/orders/${orderNumber}`);
       setOrder(response.data);
@@ -20,11 +20,11 @@ export default function OrderDetails() {
       }
       setError(err.response?.data?.message || "Could not load order.");
     }
-  };
+  }, [navigate, orderNumber]);
 
   useEffect(() => {
     loadOrder();
-  }, [orderNumber]);
+  }, [loadOrder]);
 
   const cancelOrder = async () => {
     try {
