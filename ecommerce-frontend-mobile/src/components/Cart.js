@@ -136,13 +136,22 @@ export default function Cart() {
       clearCart();
       alert(orderSuccessMessage(response.data));
     } catch (error) {
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        alert("Please login before placing your order.");
-        navigate("/login");
+      if (!error.response) {
+        const offlineOrder = saveMobileDemoOrder(payload);
+        trackOrderItems(cartItems);
+        clearCart();
+        alert(
+          `Order ${offlineOrder.orderNumber} placed successfully in mobile demo mode. Backend API is not connected on Vercel yet.`
+        );
+      } else {
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          alert("Please login before placing your order.");
+          navigate("/login");
+          return;
+        }
+        alert(error.response?.data?.message || "Order could not be placed. Please try again.");
         return;
       }
-      alert(error.response?.data?.message || "Order could not be placed. Please try again.");
-      return;
     }
 
     setCartOpen(false);
@@ -362,6 +371,24 @@ const resolveOrderImageUrl = (item) => {
   );
 
   return catalogProduct?.image || catalogProduct?.imageUrl || "";
+};
+
+const saveMobileDemoOrder = (payload) => {
+  const order = {
+    ...payload,
+    orderNumber: `MOB-${Date.now()}`,
+    placedAt: new Date().toISOString(),
+    status: "PLACED",
+    confirmationEmailStatus: "SKIPPED",
+  };
+
+  const existingOrders = JSON.parse(localStorage.getItem("nexoraMobileDemoOrders") || "[]");
+  localStorage.setItem(
+    "nexoraMobileDemoOrders",
+    JSON.stringify([order, ...existingOrders].slice(0, 20))
+  );
+
+  return order;
 };
 
 const orderSuccessMessage = (order) => {
