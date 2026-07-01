@@ -21,7 +21,14 @@ export default function HomePage() {
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState(PRODUCTS);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const { setCartOpen } = useCart();
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -75,36 +82,46 @@ export default function HomePage() {
         style={{
           width: "100%",
           backgroundColor: "#0b1120",
-          padding: "20px 60px",
+          padding: isMobile ? "12px 16px" : "20px 60px",
           display: "flex",
+          flexDirection: isMobile ? "column" : "row",
           justifyContent: "space-between",
-          alignItems: "center",
-          gap: "28px",
+          alignItems: isMobile ? "stretch" : "center",
+          gap: isMobile ? "12px" : "28px",
           borderBottom: "1px solid #1e293b",
-          position: "fixed",
+          position: isMobile ? "relative" : "fixed",
           top: 0,
           zIndex: 100,
           boxSizing: "border-box",
         }}
       >
         <Link to="/" style={brandLinkStyle} aria-label="Nexora home">
-          <span style={brandWordStyle}>Nexora</span>
-          <span style={brandSmileStyle} />
+          <span style={{ ...brandWordStyle, fontSize: isMobile ? "26px" : "35px" }}>Nexora</span>
+          <span
+            style={{
+              ...brandSmileStyle,
+              width: isMobile ? "56px" : "74px",
+              transform: isMobile
+                ? "translate(20px, -1px) rotate(-2deg)"
+                : "translate(28px, -1px) rotate(-2deg)",
+            }}
+          />
         </Link>
 
         <div
           style={{
             display: "flex",
-            gap: "24px",
+            gap: isMobile ? "14px" : "24px",
             alignItems: "center",
-            justifyContent: "flex-end",
+            justifyContent: isMobile ? "space-between" : "flex-end",
             flexWrap: "wrap",
+            width: isMobile ? "100%" : "auto",
           }}
         >
-          <Link to="/" style={navLinkStyle}>Home</Link>
-          <Link to="/products" style={navLinkStyle}>Products</Link>
-          <Link to="/orders" style={navLinkStyle}>Orders</Link>
-          <Link to="/admin" style={navLinkStyle}>Admin</Link>
+          <Link to="/" style={{ ...navLinkStyle, fontSize: isMobile ? "14px" : "18px" }}>Home</Link>
+          <Link to="/products" style={{ ...navLinkStyle, fontSize: isMobile ? "14px" : "18px" }}>Products</Link>
+          <Link to="/orders" style={{ ...navLinkStyle, fontSize: isMobile ? "14px" : "18px" }}>Orders</Link>
+          {!isMobile && <Link to="/admin" style={navLinkStyle}>Admin</Link>}
 
           <button
             onClick={() => setCartOpen(true)}
@@ -112,7 +129,7 @@ export default function HomePage() {
               background: "none",
               border: "none",
               color: "white",
-              fontSize: "18px",
+              fontSize: isMobile ? "14px" : "18px",
               cursor: "pointer",
               fontFamily: "inherit",
               padding: 0,
@@ -133,7 +150,7 @@ export default function HomePage() {
               padding: "8px 16px",
               color: "white",
               fontSize: "14px",
-              width: "min(220px, 22vw)",
+              width: isMobile ? "100%" : "min(220px, 22vw)",
               outline: "none",
               boxSizing: "border-box",
             }}
@@ -144,9 +161,10 @@ export default function HomePage() {
             style={{
               backgroundColor: "#2563eb",
               color: "white",
-              padding: "12px 22px",
-              borderRadius: "12px",
+              padding: isMobile ? "8px 14px" : "12px 22px",
+              borderRadius: isMobile ? "10px" : "12px",
               textDecoration: "none",
+              fontSize: isMobile ? "14px" : "16px",
             }}
           >
             Login
@@ -158,11 +176,12 @@ export default function HomePage() {
       <div
         style={{
           display: "flex",
-          paddingTop: "100px",
+          flexDirection: isMobile ? "column" : "row",
+          paddingTop: isMobile ? "16px" : "100px",
           maxWidth: "1500px",
           margin: "auto",
-          gap: "30px",
-          paddingInline: "20px",
+          gap: isMobile ? "16px" : "30px",
+          paddingInline: isMobile ? "16px" : "20px",
         }}
       >
         <Sidebar activeFilter={filter} onFilter={setFilter} />
@@ -178,7 +197,16 @@ export default function HomePage() {
             <>
               {showDynamicSections && dynamicSections.map((section) => (
                 <section key={section.title} style={{ marginBottom: "32px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: "18px", alignItems: "end", marginBottom: "14px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "18px",
+                      alignItems: isMobile ? "flex-start" : "end",
+                      flexDirection: isMobile ? "column" : "row",
+                      marginBottom: "14px",
+                    }}
+                  >
                     <div>
                       <h2 style={{ color: "#f8fafc", fontSize: "24px", margin: "0 0 5px" }}>
                         {section.title}
@@ -191,7 +219,13 @@ export default function HomePage() {
                       View all
                     </Link>
                   </div>
-                  <div style={homeSectionGridStyle}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(230px, 1fr))",
+                      gap: isMobile ? "14px" : "16px",
+                    }}
+                  >
                     {section.products.map((product) => (
                       <ProductCard key={`${section.title}-${product.id}`} product={product} />
                     ))}
@@ -202,7 +236,13 @@ export default function HomePage() {
               <h2 style={{ color: "#C9A84C", fontSize: "24px", margin: "8px 0 18px" }}>
                 {search ? "Personalized Search Results" : "Explore Nexora"}
               </h2>
-              <div style={productGridStyle}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))",
+                  gap: isMobile ? "14px" : "25px",
+                }}
+              >
                 {filteredProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -248,18 +288,6 @@ function mergeProductCatalog(apiProducts) {
   return [...normalized, ...localOnlyProducts];
 }
 
-const productGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-  gap: "25px",
-};
-
-const homeSectionGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
-  gap: "16px",
-};
-
 const navLinkStyle = {
   color: "white",
   textDecoration: "none",
@@ -276,16 +304,13 @@ const brandLinkStyle = {
 
 const brandWordStyle = {
   color: "#4f83ff",
-  fontSize: "35px",
   fontWeight: 800,
   letterSpacing: "0",
   fontFamily: "Georgia, 'Times New Roman', serif",
 };
 
 const brandSmileStyle = {
-  width: "74px",
   height: "5px",
   borderBottom: "3px solid #f59e0b",
   borderRadius: "0 0 999px 999px",
-  transform: "translate(28px, -1px) rotate(-2deg)",
 };

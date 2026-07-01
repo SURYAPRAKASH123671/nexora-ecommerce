@@ -59,7 +59,13 @@ export default function ProductCard({ product }) {
     >
       <div
         onClick={handleProductOpen}
-        style={{ width: "100%", height: "210px", overflow: "hidden", background: "#f8fafc", position: "relative" }}
+        style={{
+          width: "100%",
+          height: "clamp(150px, 32vw, 210px)",
+          overflow: "hidden",
+          background: "#f8fafc",
+          position: "relative",
+        }}
       >
         {badge && (
         <div
@@ -95,7 +101,7 @@ export default function ProductCard({ product }) {
         />
       </div>
 
-      <div style={{ padding: "14px" }}>
+      <div style={{ padding: "clamp(10px, 2vw, 14px)" }}>
         <p style={{ color: "#b6b6b6", fontSize: "12px", margin: "0 0 5px" }}>
           {product.brand}
         </p>
@@ -104,7 +110,7 @@ export default function ProductCard({ product }) {
           onClick={handleProductOpen}
           style={{
             color: "white",
-            fontSize: "15px",
+            fontSize: "clamp(14px, 2vw, 15px)",
             margin: "0 0 8px",
             cursor: "pointer",
             minHeight: "38px",
@@ -149,7 +155,7 @@ export default function ProductCard({ product }) {
           "{product.reviewSnippet || "Top rated by verified buyers"}"
         </p>
 
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div style={{ display: "flex", gap: "8px", alignItems: "stretch" }}>
           <button
             onClick={handleAddToCart}
             style={{

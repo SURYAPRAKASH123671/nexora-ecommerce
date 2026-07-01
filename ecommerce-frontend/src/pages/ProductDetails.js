@@ -15,6 +15,13 @@ export default function ProductDetails() {
   const { id } = useParams();
   const product = PRODUCTS.find((p) => p.id === parseInt(id));
   const { addToCart, setCartOpen, formatPrice } = useCart();
+  const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 768);
+
+  React.useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   React.useEffect(() => {
     if (product) {
@@ -71,24 +78,44 @@ export default function ProductDetails() {
         background: "#0A0A0A",
         minHeight: "100vh",
         color: "white",
-        padding: "32px 24px",
+        padding: isMobile ? "18px 14px 84px" : "32px 24px",
         maxWidth: "1280px",
         margin: "auto",
       }}
     >
-      <div style={detailGridStyle}>
-        <div style={imagePanelStyle}>
+      <div
+        style={{
+          ...detailGridStyle,
+          gridTemplateColumns: isMobile
+            ? "1fr"
+            : "minmax(280px, 420px) minmax(320px, 1fr) 280px",
+          gap: isMobile ? "18px" : "28px",
+        }}
+      >
+        <div
+          style={{
+            ...imagePanelStyle,
+            position: isMobile ? "relative" : "sticky",
+            top: isMobile ? "auto" : "24px",
+            padding: isMobile ? "10px" : "18px",
+          }}
+        >
           <img
             src={product.image}
             alt={product.name}
             onError={handleImageError}
-            style={imageStyle}
+            style={{
+              ...imageStyle,
+              height: isMobile ? "240px" : "340px",
+            }}
           />
         </div>
 
         <div>
           <p style={brandStyle}>{product.brand}</p>
-          <h1 style={titleStyle}>{product.name}</h1>
+          <h1 style={{ ...titleStyle, fontSize: isMobile ? "24px" : "28px" }}>
+            {product.name}
+          </h1>
 
           <div style={ratingRowStyle}>
             <span style={ratingPillStyle}>{product.rating.toFixed(1)} ★</span>
@@ -112,7 +139,12 @@ export default function ProductDetails() {
           <p style={offerStyle}>{product.offer}</p>
           <p style={deliveryStyle}>{product.delivery}</p>
 
-          <div style={infoGridStyle}>
+          <div
+            style={{
+              ...infoGridStyle,
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+            }}
+          >
             <span>7 days replacement</span>
             <span>Secure transaction</span>
             <span>Top brand</span>
@@ -132,7 +164,13 @@ export default function ProductDetails() {
           </ul>
         </div>
 
-        <aside style={buyBoxStyle}>
+        <aside
+          style={{
+            ...buyBoxStyle,
+            position: isMobile ? "relative" : "sticky",
+            top: isMobile ? "auto" : "24px",
+          }}
+        >
           <p style={stockStyle}>In stock</p>
           <p style={{ color: "#ccc", margin: "0 0 16px" }}>
             Sold by Nexora Retail and fulfilled by Nexora.
@@ -146,7 +184,7 @@ export default function ProductDetails() {
         </aside>
       </div>
 
-      <section style={reviewsSectionStyle}>
+      <section style={{ ...reviewsSectionStyle, marginTop: isMobile ? "24px" : "34px" }}>
         <RecommendationRail title="You may also like" products={youMayLike} />
         <RecommendationRail
           title={product.category === "automotive" ? "Similar performance cars" : "Similar picks"}
@@ -230,8 +268,6 @@ const getDefaultReviews = (product) => [
 
 const detailGridStyle = {
   display: "grid",
-  gridTemplateColumns: "minmax(280px, 420px) minmax(320px, 1fr) 280px",
-  gap: "28px",
   alignItems: "start",
 };
 
@@ -239,9 +275,6 @@ const imagePanelStyle = {
   background: "#f8fafc",
   border: "1px solid #2a2a2a",
   borderRadius: "8px",
-  padding: "18px",
-  position: "sticky",
-  top: "24px",
 };
 
 const imageStyle = {
@@ -316,7 +349,6 @@ const deliveryStyle = {
 
 const infoGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
   gap: "10px",
   color: "#d7d7d7",
   fontSize: "13px",
@@ -345,8 +377,6 @@ const buyBoxStyle = {
   borderRadius: "8px",
   padding: "18px",
   background: "#141414",
-  position: "sticky",
-  top: "24px",
 };
 
 const stockStyle = {

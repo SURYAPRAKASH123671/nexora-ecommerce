@@ -12,6 +12,7 @@ import { trackOrderItems } from "../utils/personalization";
 
 export default function Cart() {
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 640);
   const [paymentMethod, setPaymentMethod] = React.useState("cod");
   const [address, setAddress] = React.useState({
     fullName: "",
@@ -38,6 +39,12 @@ export default function Cart() {
     changeQty,
     clearCart,
   } = useCart();
+
+  React.useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 640);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   if (!cartOpen) return null;
 
@@ -156,17 +163,17 @@ export default function Cart() {
       position: "fixed",
       right: 0,
       top: 0,
-      width: "400px",
+      width: isMobile ? "100vw" : "400px",
       height: "100vh",
       background: "#111",
       color: "white",
       zIndex: 2000,
-      padding: "20px",
+      padding: isMobile ? "16px" : "20px",
       overflowY: "auto",
       boxSizing: "border-box",
     }}>
-      <button onClick={() => setCartOpen(false)}>Close</button>
-      <h2>Shopping Bag</h2>
+      <button onClick={() => setCartOpen(false)} style={closeButtonStyle}>Close</button>
+      <h2 style={{ marginTop: "14px" }}>Shopping Bag</h2>
 
       {cartItems.length === 0 && (
         <p style={{ color: "#888", marginTop: "20px" }}>Your bag is empty.</p>
@@ -269,7 +276,7 @@ export default function Cart() {
               style={inputStyle}
             />
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px" }}>
               <input
                 name="city"
                 placeholder="City"
@@ -382,6 +389,15 @@ const qtyBtnStyle = {
   cursor: "pointer",
   fontSize: "16px",
   borderRadius: "4px",
+};
+
+const closeButtonStyle = {
+  background: "#1f2937",
+  border: "1px solid #334155",
+  color: "white",
+  borderRadius: "8px",
+  padding: "9px 12px",
+  cursor: "pointer",
 };
 
 const removeBtnStyle = {
