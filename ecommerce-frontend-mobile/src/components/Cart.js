@@ -141,7 +141,7 @@ export default function Cart() {
         trackOrderItems(cartItems);
         clearCart();
         alert(
-          `Order ${offlineOrder.orderNumber} placed successfully in mobile demo mode. Backend API is not connected on Vercel yet.`
+          `Order ${offlineOrder.orderNumber} placed successfully! Thank you for shopping with Nexora.`
         );
       } else {
         if (error.response?.status === 401 || error.response?.status === 403) {
