@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: nexora-backend
+    env: docker
+    rootDir: ecommerce-backend
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /api/products
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: mail
+      - key: JPA_DDL_AUTO
+        value: update
+      - key: JPA_SHOW_SQL
+        value: false
+      - key: MAIL_ENABLED
+        value: true
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: 587
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: FRONTEND_BASE_URL
+        value: https://nexora-web-virid.vercel.app
+      - key: BACKEND_BASE_URL
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://nexora-web-virid.vercel.app,https://nexora-mobile.vercel.app,https://nexora-frontend-livid.vercel.app,http://localhost:3000
