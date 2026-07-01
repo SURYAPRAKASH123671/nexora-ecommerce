@@ -4,61 +4,69 @@ This repository keeps the API, web storefront, and mobile storefront as separate
 
 ## Folders
 
-- `ecommerce-backend` - Spring Boot REST API. Deploy this to Render using the included Docker setup.
-- `ecommerce-frontend-web` - Desktop/web storefront. Deploy this folder as a Vercel project.
-- `ecommerce-frontend-mobile` - Mobile-focused storefront. Deploy this folder as a separate Vercel project.
-- `ecommerce-frontend` - Current responsive storefront used by the existing Vercel deployment.
+- `ecommerce-backend` - Spring Boot REST API. Deployed on Railway with Docker and connected to Railway MySQL.
+- `ecommerce-frontend-web` - Desktop/web storefront. Deployed as the `nexora-web` Vercel project.
+- `ecommerce-frontend-mobile` - Mobile-focused storefront. Deployed as the `nexora-mobile` Vercel project.
 
-## Backend Deployment: Render
+## Live URLs
 
-Use the root-level `render.yaml` blueprint or create a Render Web Service manually.
+- Backend API: `https://nexora-ecommerce-production.up.railway.app/api`
+- Web storefront: `https://nexora-web-virid.vercel.app`
+- Mobile storefront: `https://nexora-mobile.vercel.app`
 
-Recommended Render settings:
+## Railway Backend
 
-- Service Type: `Web Service`
-- Environment: `Docker`
-- Root Directory: `ecommerce-backend`
-- Health Check Path: `/api/products`
-- Auto Deploy: `Yes`
+Railway services:
 
-Required backend environment variables:
+- `nexora-ecommerce` - Spring Boot backend service
+- `MySQL` - hosted production database
 
-- `DB_URL` - MySQL JDBC URL, for example `jdbc:mysql://host:3306/database?useSSL=true&serverTimezone=UTC`
-- `DB_USERNAME` - MySQL username
-- `DB_PASSWORD` - MySQL password
+Important backend environment variables:
+
+- `DB_URL` - Railway MySQL JDBC URL
+- `DB_USERNAME` - Railway MySQL username
+- `DB_PASSWORD` - Railway MySQL password
 - `JWT_SECRET` - long random secret for JWT signing
-- `MAIL_HOST` - `smtp.gmail.com`
-- `MAIL_PORT` - `587`
-- `MAIL_USERNAME` - Gmail address used for SMTP
-- `MAIL_PASSWORD` - Gmail app password
+- `MAIL_HOST` - SMTP host
+- `MAIL_PORT` - SMTP port
+- `MAIL_USERNAME` - SMTP username
+- `MAIL_PASSWORD` - SMTP app/API password
 - `MAIL_FROM` - sender email address
 - `MAIL_ENABLED` - `true`
-- `FRONTEND_BASE_URL` - production web frontend URL
-- `BACKEND_BASE_URL` - production backend URL after Render creates it
+- `FRONTEND_BASE_URL` - `https://nexora-web-virid.vercel.app`
+- `BACKEND_BASE_URL` - `https://nexora-ecommerce-production.up.railway.app`
 - `CORS_ALLOWED_ORIGINS` - comma-separated frontend URLs allowed to call the API
 
-Example `CORS_ALLOWED_ORIGINS`:
+Current CORS origins:
 
 ```text
-https://nexora-web-virid.vercel.app,https://nexora-mobile.vercel.app,https://nexora-frontend-livid.vercel.app,http://localhost:3000
+https://nexora-web-virid.vercel.app,https://nexora-mobile.vercel.app,http://localhost:3000
 ```
 
-Do not commit real database passwords, Gmail app passwords, or JWT secrets.
+Do not commit real database passwords, SMTP passwords, or JWT secrets.
 
 ## Vercel Settings
 
 For the web project:
 
+- Project Name: `nexora-web`
 - Root Directory: `ecommerce-frontend-web`
 - Build Command: `npm run build`
 - Output Directory: `build`
-- Environment Variable: `REACT_APP_API_BASE_URL=https://your-render-backend-url/api`
+- Environment Variable: `REACT_APP_API_BASE_URL=https://nexora-ecommerce-production.up.railway.app/api`
 
 For the mobile project:
 
+- Project Name: `nexora-mobile`
 - Root Directory: `ecommerce-frontend-mobile`
 - Build Command: `npm run build`
 - Output Directory: `build`
-- Environment Variable: `REACT_APP_API_BASE_URL=https://your-render-backend-url/api`
+- Environment Variable: `REACT_APP_API_BASE_URL=https://nexora-ecommerce-production.up.railway.app/api`
+
+Removed duplicate projects:
+
+- Old GitHub folder: `ecommerce-frontend`
+- Old Vercel project: `nexora`
+- Old Vercel project: `nexora-frontend`
 
 The backend API should not be deployed to Vercel as a static React project.
