@@ -115,7 +115,15 @@ export default function ProductsPage() {
               </Link>
             </div>
           ) : (
-            <div style={{ display: "flex", gap: "30px", alignItems: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: "24px",
+                alignItems: "center",
+                flexWrap: "wrap",
+                justifyContent: "flex-end",
+              }}
+            >
               <Link to="/" style={navLinkStyle}>Home</Link>
               <Link to="/products" style={navLinkStyle}>Products</Link>
               <Link to="/orders" style={navLinkStyle}>Orders</Link>
@@ -133,6 +141,16 @@ export default function ProductsPage() {
               >
                 Cart 🛒
               </button>
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{
+                  ...searchInputStyle,
+                  width: "min(220px, 22vw)",
+                }}
+              />
               <Link
                 to="/login"
                 style={{
@@ -158,27 +176,18 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {/* Search bar */}
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            background: "#1a1a2e",
-            border: "1px solid #333",
-            borderRadius: "8px",
-            padding: "10px 16px",
-            color: "white",
-            fontSize: "14px",
-            width: isMobile ? "100%" : "220px",
-            outline: "none",
-            boxSizing: "border-box",
-            position: isMobile ? "static" : "absolute",
-            right: isMobile ? "auto" : "60px",
-            top: isMobile ? "auto" : "26px",
-          }}
-        />
+        {isMobile && (
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              ...searchInputStyle,
+              width: "100%",
+            }}
+          />
+        )}
       </div>
 
       {/* MAIN CONTENT */}
@@ -234,6 +243,17 @@ const navLinkStyle = {
   color: "white",
   textDecoration: "none",
   fontSize: "18px",
+};
+
+const searchInputStyle = {
+  background: "#1a1a2e",
+  border: "1px solid #333",
+  borderRadius: "8px",
+  padding: "10px 16px",
+  color: "white",
+  fontSize: "14px",
+  outline: "none",
+  boxSizing: "border-box",
 };
 
 const brandLinkStyle = {

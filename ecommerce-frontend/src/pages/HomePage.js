@@ -79,6 +79,7 @@ export default function HomePage() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          gap: "28px",
           borderBottom: "1px solid #1e293b",
           position: "fixed",
           top: 0,
@@ -91,7 +92,15 @@ export default function HomePage() {
           <span style={brandSmileStyle} />
         </Link>
 
-        <div style={{ display: "flex", gap: "30px", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "24px",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            flexWrap: "wrap",
+          }}
+        >
           <Link to="/" style={navLinkStyle}>Home</Link>
           <Link to="/products" style={navLinkStyle}>Products</Link>
           <Link to="/orders" style={navLinkStyle}>Orders</Link>
@@ -112,6 +121,24 @@ export default function HomePage() {
             Cart 🛒
           </button>
 
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              background: "#1a1a2e",
+              border: "1px solid #333",
+              borderRadius: "8px",
+              padding: "8px 16px",
+              color: "white",
+              fontSize: "14px",
+              width: "min(220px, 22vw)",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+
           <Link
             to="/login"
             style={{
@@ -126,22 +153,6 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            background: "#1a1a2e",
-            border: "1px solid #333",
-            borderRadius: "8px",
-            padding: "8px 16px",
-            color: "white",
-            fontSize: "14px",
-            width: "220px",
-            outline: "none",
-          }}
-        />
       </div>
 
       <div
