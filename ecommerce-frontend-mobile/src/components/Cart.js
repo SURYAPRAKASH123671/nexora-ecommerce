@@ -392,19 +392,7 @@ const saveMobileDemoOrder = (payload) => {
 };
 
 const orderSuccessMessage = (order) => {
-  if (order.confirmationEmailStatus === "SENT") {
-    return `Order ${order.orderNumber} placed successfully! Confirmation email sent.`;
-  }
-
-  if (order.confirmationEmailStatus === "FAILED") {
-    return `Order ${order.orderNumber} placed successfully, but confirmation email could not be sent. Check SMTP settings.`;
-  }
-
-  if (order.confirmationEmailStatus === "SKIPPED") {
-    return `Order ${order.orderNumber} placed successfully. Email sending is disabled in this environment.`;
-  }
-
-  return `Order ${order.orderNumber} placed successfully.`;
+  return `Order ${order.orderNumber} placed successfully. Thank you for shopping with Nexora.`;
 };
 
 const qtyBtnStyle = {
