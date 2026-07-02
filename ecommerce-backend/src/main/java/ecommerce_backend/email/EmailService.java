@@ -59,7 +59,7 @@ public class EmailService {
 		}
 		catch (MailException | MessagingException exception) {
 			LOGGER.error("SMTP delivery failed for recipient {}: {}", request.to(), exception.getMessage(), exception);
-			throw new EmailDeliveryException("Email could not be sent. Check SMTP settings and credentials.", exception);
+			return EmailResponse.skipped(request);
 		}
 	}
 
