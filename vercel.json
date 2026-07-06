@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "installCommand": "cd ecommerce-frontend && npm install",
-  "buildCommand": "cd ecommerce-frontend && npm run build",
-  "outputDirectory": "ecommerce-frontend/build",
+  "installCommand": "cd ecommerce-frontend-web && npm install",
+  "buildCommand": "cd ecommerce-frontend-web && npm run build",
+  "outputDirectory": "ecommerce-frontend-web/build",
   "rewrites": [
     {
       "source": "/(.*)",
