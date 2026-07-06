@@ -1,55 +1,66 @@
 # Nexora E-Commerce Platform
 
-A full-stack e-commerce web application built using React, Spring Boot, MySQL, JWT Authentication, and Gmail SMTP integration.
+Nexora is a full-stack e-commerce application built with **Spring Boot, React, MySQL, Spring Security, JWT authentication, and email workflows**. The project focuses on real application structure: secure APIs, layered backend architecture, database persistence, shopping flows, and customer/admin features.
+
+## Core Features
+
+- User registration and login with JWT authentication.
+- Product catalog APIs with category-aware product management.
+- Cart, checkout, order placement, and order history workflows.
+- Admin dashboard APIs for managing platform data.
+- Email verification, password reset, and order confirmation email support.
+- Profile and saved address management.
+- PDF invoice generation and tested email builder logic.
+- MySQL persistence with Spring Data JPA and Hibernate.
 
 ## Tech Stack
 
-### Frontend
-- React.js
-- JavaScript
-- HTML5
-- CSS3
+| Area | Technology |
+| --- | --- |
+| Backend | Java, Spring Boot, Spring Security, Spring MVC |
+| Persistence | MySQL, Spring Data JPA, Hibernate |
+| Authentication | JWT, Spring Security filter chain |
+| Email | JavaMail Sender / SMTP |
+| Testing | JUnit, Spring Boot Test |
+| Build | Gradle |
 
-### Backend
-- Spring Boot
-- Spring Security
-- JWT Authentication
-- JavaMail Sender
+## Repository Layout
 
-### Database
-- MySQL
+```text
+src/main/java/ecommerce_backend/
+  auth/       Authentication, JWT, verification, password reset
+  product/    Product APIs and persistence
+  category/   Category APIs and persistence
+  order/      Checkout, orders, invoices
+  profile/    Customer profile and address flows
+  admin/      Admin dashboard APIs
+  email/      Email delivery and templates
+  config/     Security and development configuration
+```
 
-## Features
+## Run Locally
 
-- User Registration & Login
-- JWT Authentication
-- Product Management
-- Shopping Cart
-- Order Placement
-- Order Confirmation Email
-- Secure REST APIs
-- MySQL Database Integration
+```bash
+./gradlew bootRun
+```
 
-## Email Integration
+On Windows:
 
-Order confirmation emails are automatically sent to customers using Gmail SMTP when an order is placed successfully.
+```bash
+gradlew.bat bootRun
+```
 
-## Project Structure
+Run tests:
 
-Frontend:
-- React.js
+```bash
+./gradlew test
+```
 
-Backend:
-- Spring Boot
-- MySQL
-- JWT Authentication
-- Gmail SMTP
+## Related Repository
+
+- [Nexora Frontend](https://github.com/SURYAPRAKASH123671/nexora-frontend)
 
 ## Author
 
-**Surya Prakash K.S.**
-
-B.Tech Information Technology Graduate
-
-GitHub:
-https://github.com/SURYAPRAKASH123671
+Surya Prakash K S  
+[GitHub](https://github.com/SURYAPRAKASH123671) · [LinkedIn](https://www.linkedin.com/in/surya-prakash-k-s-25b177242)
