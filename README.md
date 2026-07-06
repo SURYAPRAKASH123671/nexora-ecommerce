@@ -56,10 +56,6 @@ Run tests:
 ./gradlew test
 ```
 
-## Related Repository
-
-- [Nexora Frontend](https://github.com/SURYAPRAKASH123671/nexora-frontend)
-
 ## Author
 
 Surya Prakash K S  
