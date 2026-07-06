@@ -47,3 +47,5 @@ logs/
 
 ### VS Code ###
 .vscode/
+.vercel
+.env*

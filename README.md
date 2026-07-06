@@ -2,6 +2,10 @@
 
 Nexora is a full-stack e-commerce application built with **Spring Boot, React, MySQL, Spring Security, JWT authentication, and email workflows**. The project focuses on real application structure: secure APIs, layered backend architecture, database persistence, shopping flows, and customer/admin features.
 
+## Live Demo
+
+[nexora-web-virid.vercel.app](https://nexora-web-virid.vercel.app/)
+
 ## Core Features
 
 - User registration and login with JWT authentication.
@@ -55,6 +59,10 @@ Run tests:
 ```bash
 ./gradlew test
 ```
+
+## Frontend Deployment
+
+The web frontend is deployed from `ecommerce-frontend-web` using Vercel. The root `vercel.json` points Vercel to the correct install, build, and output paths for that frontend.
 
 ## Author
 
