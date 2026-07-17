@@ -3,6 +3,13 @@
   "installCommand": "cd ecommerce-frontend-web && npm install",
   "buildCommand": "cd ecommerce-frontend-web && npm run build",
   "outputDirectory": "ecommerce-frontend-web/build",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "destination": "https://nexora-commerce-surya.kssuryaprakash2.chatgpt.site/:path*",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",

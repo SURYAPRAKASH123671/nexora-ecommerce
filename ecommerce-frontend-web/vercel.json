@@ -2,6 +2,13 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "build",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "destination": "https://nexora-commerce-surya.kssuryaprakash2.chatgpt.site/:path*",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
