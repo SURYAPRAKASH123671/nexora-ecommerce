@@ -1,108 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { categories, fallbackProducts, type Product } from "./catalog";
 
 type View = "home" | "catalog" | "product" | "cart" | "checkout" | "account" | "admin";
-
-type Product = {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  previousPrice?: number;
-  stockQuantity: number;
-  imageUrl: string;
-  categoryName: string;
-  rating: number;
-  reviews: number;
-  badge?: string;
-};
 
 type CartLine = { product: Product; quantity: number };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
-
-const fallbackProducts: Product[] = [
-  {
-    id: 101,
-    name: "Nexora Arc Headphones",
-    description: "Adaptive noise cancellation, spatial sound and 38-hour listening.",
-    price: 26990,
-    previousPrice: 31990,
-    stockQuantity: 18,
-    imageUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=88",
-    categoryName: "Audio",
-    rating: 4.8,
-    reviews: 1240,
-    badge: "Bestseller",
-  },
-  {
-    id: 102,
-    name: "Pixel Studio Phone",
-    description: "A brilliant OLED display, pro-grade camera and all-day intelligence.",
-    price: 67999,
-    previousPrice: 74999,
-    stockQuantity: 12,
-    imageUrl: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=1200&q=88",
-    categoryName: "Phones",
-    rating: 4.7,
-    reviews: 892,
-    badge: "New",
-  },
-  {
-    id: 103,
-    name: "AeroBook 14",
-    description: "Lightweight performance for ambitious work, wherever ideas happen.",
-    price: 89990,
-    previousPrice: 99990,
-    stockQuantity: 7,
-    imageUrl: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=1200&q=88",
-    categoryName: "Computing",
-    rating: 4.9,
-    reviews: 540,
-    badge: "Top rated",
-  },
-  {
-    id: 104,
-    name: "Cloudstep One",
-    description: "Responsive everyday trainers shaped for movement and long comfort.",
-    price: 7495,
-    previousPrice: 8995,
-    stockQuantity: 24,
-    imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=88",
-    categoryName: "Lifestyle",
-    rating: 4.6,
-    reviews: 723,
-    badge: "Limited",
-  },
-  {
-    id: 105,
-    name: "Halo Watch 2",
-    description: "Thoughtful health insights and essential updates at a glance.",
-    price: 21999,
-    previousPrice: 24999,
-    stockQuantity: 15,
-    imageUrl: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=88",
-    categoryName: "Wearables",
-    rating: 4.7,
-    reviews: 415,
-  },
-  {
-    id: 106,
-    name: "Frame Mini Camera",
-    description: "A compact creative camera with cinematic color and intuitive controls.",
-    price: 52990,
-    previousPrice: 57990,
-    stockQuantity: 9,
-    imageUrl: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=88",
-    categoryName: "Cameras",
-    rating: 4.8,
-    reviews: 308,
-    badge: "Creator pick",
-  },
-];
-
-const categories = ["All", "Phones", "Audio", "Computing", "Wearables", "Lifestyle", "Cameras"];
 
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 
@@ -139,7 +44,8 @@ export default function Home() {
           reviews: 86 + index * 47,
           badge: index === 0 ? "Featured" : undefined,
         }));
-        setProducts(mapped);
+        const liveNames = new Set(mapped.map((product) => product.name.toLowerCase()));
+        setProducts([...mapped, ...fallbackProducts.filter((product) => !liveNames.has(product.name.toLowerCase()))]);
         setSelected(mapped[0]);
         setUsingDemoCatalog(false);
       })
@@ -265,20 +171,20 @@ export default function Home() {
               <article><span aria-hidden="true">↺</span><div><b>Easy returns</b><small>Simple support when plans change</small></div></article>
             </section>
 
-            <ProductSection title="Trending now" subtitle="What people are loving this week" products={products.slice(0, 4)} onOpen={openProduct} onAdd={addToCart} wishlist={wishlist} onWishlist={toggleWishlist} loading={loading} onAll={() => navigate("catalog")} />
+            <ProductSection title="Trending across India" subtitle="Recognisable technology, home and lifestyle favourites" products={products.slice(0, 4)} onOpen={openProduct} onAdd={addToCart} wishlist={wishlist} onWishlist={toggleWishlist} loading={loading} onAll={() => navigate("catalog")} />
 
             <section className="collection-grid wrap">
               <article className="collection-card collection-blue" onClick={() => { setCategory("Computing"); navigate("catalog"); }}>
                 <div><span className="eyebrow">Work beautifully</span><h2>Tools for your next big idea.</h2><p>Focused technology for creating, learning and building.</p><button>Explore computing →</button></div>
-                <img src={fallbackProducts[2].imageUrl} alt="AeroBook laptop collection" />
+                <img src={fallbackProducts.find((product) => product.categoryName === "Computing")?.imageUrl} alt="Laptop collection" />
               </article>
               <article className="collection-card collection-sand" onClick={() => { setCategory("Lifestyle"); navigate("catalog"); }}>
                 <div><span className="eyebrow">Move your way</span><h2>Comfort in every step.</h2><p>Everyday essentials made to keep up.</p><button>Shop lifestyle →</button></div>
-                <img src={fallbackProducts[3].imageUrl} alt="Cloudstep lifestyle collection" />
+                <img src={fallbackProducts.find((product) => product.categoryName === "Lifestyle")?.imageUrl} alt="Lifestyle collection" />
               </article>
             </section>
 
-            <ProductSection title="Recommended for you" subtitle="Based on what is popular across Nexora" products={products.slice(2, 6)} onOpen={openProduct} onAdd={addToCart} wishlist={wishlist} onWishlist={toggleWishlist} loading={loading} onAll={() => navigate("catalog")} />
+            <ProductSection title="Explore more favourites" subtitle={`A preview of ${products.length} products available across the India showcase`} products={products.slice(24, 28)} onOpen={openProduct} onAdd={addToCart} wishlist={wishlist} onWishlist={toggleWishlist} loading={loading} onAll={() => navigate("catalog")} />
 
             <section className="testimonial wrap">
               <div><span className="eyebrow">Customer story</span><blockquote>“The entire experience felt calm and effortless—from finding the right headphones to knowing exactly when they would arrive.”</blockquote><p><b>Ananya R.</b> · Verified buyer</p></div>
@@ -290,7 +196,7 @@ export default function Home() {
         {view === "catalog" && (
           <section className="catalog wrap">
             <div className="page-heading"><div><span className="eyebrow">Nexora collection</span><h1>{query ? `Results for “${query}”` : category === "All" ? "Shop everything" : category}</h1><p>{filtered.length} thoughtfully selected products</p></div><button className="filter-button">Sort: Recommended ⌄</button></div>
-            {usingDemoCatalog && <div className="info-banner"><span>i</span><div><b>Portfolio catalogue active</b><p>The live backend is supported; curated sample products appear while its database is empty or offline.</p></div></div>}
+            <div className="info-banner"><span>i</span><div><b>{usingDemoCatalog ? "India showcase catalogue" : "Live catalogue with India showcase expansion"}</b><p>Product models are real and sold in India. Prices, discounts, stock, ratings and reviews are representative portfolio data—not live retailer claims.</p></div></div>
             <div className="filter-chips" aria-label="Filter by category">
               {categories.map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}
             </div>
