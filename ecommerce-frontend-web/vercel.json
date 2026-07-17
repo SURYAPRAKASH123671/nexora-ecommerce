@@ -4,6 +4,11 @@
   "outputDirectory": "build",
   "redirects": [
     {
+      "source": "/",
+      "destination": "https://nexora-commerce-surya.kssuryaprakash2.chatgpt.site/",
+      "permanent": false
+    },
+    {
       "source": "/:path*",
       "destination": "https://nexora-commerce-surya.kssuryaprakash2.chatgpt.site/:path*",
       "permanent": false
