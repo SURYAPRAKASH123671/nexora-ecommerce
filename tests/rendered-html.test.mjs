@@ -63,13 +63,13 @@ test("catalog contains 80 India-market products across ten categories", async ()
   assert.match(catalog, /Prestige PIC 20 Induction Cooktop/);
   assert.match(catalog, /Mokobara Transit Backpack/);
   assert.match(catalog, /Made for India|Indian brand/);
-  assert.match(catalog, /\/products\/\$\{productSlug\(name\)\}\.webp/);
+  assert.match(catalog, /\/products\/\$\{productSlug\(name\)\}\.jpg/);
 });
 
 test("ships one unique local product image for every catalogue item", async () => {
   const imageRoot = new URL("../public/products/", import.meta.url);
   const files = (await readdir(imageRoot)).filter((file) =>
-    file.endsWith(".webp"),
+    file.endsWith(".jpg"),
   );
   const hashes = await Promise.all(
     files.map(async (file) => {

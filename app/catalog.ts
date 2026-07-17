@@ -26,7 +26,7 @@ function makeProducts(categoryName: string, startId: number, seeds: ProductSeed[
     price,
     previousPrice,
     stockQuantity: 8 + ((startId + index) * 7) % 39,
-    imageUrl: `/products/${productSlug(name)}.webp`,
+    imageUrl: `/products/${productSlug(name)}.jpg`,
     categoryName,
     rating: Number((4.3 + ((startId + index) % 6) / 10).toFixed(1)),
     reviews: 124 + ((startId + index) * 83) % 2400,
