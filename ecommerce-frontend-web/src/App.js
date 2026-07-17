@@ -19,6 +19,7 @@ import OrderDetails from "./pages/OrderDetails";
 import AdminDashboard from "./pages/AdminDashboard";
 
 import Cart from "./components/Cart";
+import CreatorCredit from "./components/CreatorCredit";
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
         </Routes>
 
         <Cart />
+        <CreatorCredit />
       </BrowserRouter>
     </CartProvider>
   );
