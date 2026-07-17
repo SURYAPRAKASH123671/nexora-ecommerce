@@ -925,7 +925,7 @@ function CheckoutView({
     setError("");
     if (!auth)
       return setError(
-        "Continue with ChatGPT before creating a protected order reference.",
+        "Sign in securely before creating a protected order reference.",
       );
     if (
       !form.email ||
@@ -1618,7 +1618,7 @@ function AccountView({
           <p>
             {auth
               ? `${auth.user.email} · ${auth.user.isAdmin ? "Administrator" : "Customer"}`
-              : "Continue with ChatGPT to create orders, submit payment proof and see private order history."}
+              : "Sign in securely to create orders, submit payment proof and see private order history."}
           </p>
           {auth ? (
             <a
@@ -1632,7 +1632,7 @@ function AccountView({
               className="primary account-link"
               href="/signin-with-chatgpt?return_to=%2F"
             >
-              Continue with ChatGPT
+              Secure sign in
             </a>
           )}
         </div>
@@ -1653,8 +1653,8 @@ function AccountView({
             <span className="eyebrow">Protected identity</span>
             <h2>No separate Nexora password</h2>
             <p>
-              Nexora uses your authenticated ChatGPT identity for this hosted
-              portfolio, so your password is never collected by this storefront.
+              Nexora uses a protected account session, so your password is never
+              collected or stored by this storefront.
             </p>
           </div>
           <a
@@ -1712,7 +1712,7 @@ function AccountView({
         <article>
           <span>♢</span>
           <h3>Security</h3>
-          <p>ChatGPT sign-in and server-enforced administrator routes.</p>
+          <p>Protected sign-in and server-enforced administrator routes.</p>
           <button
             onClick={() =>
               onAction(

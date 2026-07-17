@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    "https://nexora-commerce-surya.kssuryaprakash2.chatgpt.site",
+    "https://nexora-web-virid.vercel.app",
   ),
   title: "Nexora — Thoughtfully chosen",
   description:

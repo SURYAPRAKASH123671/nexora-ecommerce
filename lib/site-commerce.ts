@@ -25,7 +25,7 @@ export function requireSiteUser(request: Request): SiteUser {
     .get("oai-authenticated-user-email")
     ?.trim()
     .toLowerCase();
-  if (!email) throw new HttpError(401, "Sign in with ChatGPT to continue.");
+  if (!email) throw new HttpError(401, "Sign in securely to continue.");
   const encodedName = request.headers.get("oai-authenticated-user-full-name");
   const name =
     encodedName &&
