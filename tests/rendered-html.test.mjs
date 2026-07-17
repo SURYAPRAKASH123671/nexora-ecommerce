@@ -56,3 +56,12 @@ test("ships one unique local product image for every catalogue item", async () =
   assert.equal(files.length, 80);
   assert.equal(new Set(hashes).size, 80);
 });
+
+test("every storefront button is wired to an action", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const buttonTags = page.match(/<button\b[^>]*>/g) ?? [];
+  const inertButtons = buttonTags.filter((tag) => !/\bonClick=/.test(tag) && !/\btype=["']submit["']/.test(tag));
+
+  assert.ok(buttonTags.length > 40);
+  assert.deepEqual(inertButtons, []);
+});

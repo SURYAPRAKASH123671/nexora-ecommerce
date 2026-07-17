@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { categories, fallbackProducts, type Product } from "./catalog";
 
 type View = "home" | "catalog" | "product" | "cart" | "checkout" | "account" | "admin";
+type SortMode = "recommended" | "price-low" | "price-high" | "rating";
 
 type CartLine = { product: Product; quantity: number };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+const sortModes: SortMode[] = ["recommended", "price-low", "price-high", "rating"];
+const sortLabels: Record<SortMode, string> = { recommended: "Recommended", "price-low": "Price: Low to high", "price-high": "Price: High to low", rating: "Customer rating" };
 
 export default function Home() {
   const [view, setView] = useState<View>("home");
@@ -22,6 +25,11 @@ export default function Home() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [wishlist, setWishlist] = useState<number[]>([]);
   const [notice, setNotice] = useState("");
+  const [dialog, setDialog] = useState<{ title: string; body: string } | null>(null);
+  const [sortMode, setSortMode] = useState<SortMode>("recommended");
+  const [finish, setFinish] = useState("Obsidian");
+  const [imageMode, setImageMode] = useState<"front" | "detail">("front");
+  const [deliveryPin, setDeliveryPin] = useState("560001");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -56,12 +64,16 @@ export default function Home() {
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return products.filter((product) => {
+    const matches = products.filter((product) => {
       const categoryMatch = category === "All" || product.categoryName === category;
       const searchMatch = !term || `${product.name} ${product.description} ${product.categoryName}`.toLowerCase().includes(term);
       return categoryMatch && searchMatch;
     });
-  }, [products, query, category]);
+    if (sortMode === "price-low") return [...matches].sort((a, b) => a.price - b.price);
+    if (sortMode === "price-high") return [...matches].sort((a, b) => b.price - a.price);
+    if (sortMode === "rating") return [...matches].sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
+    return matches;
+  }, [products, query, category, sortMode]);
 
   const cartCount = cart.reduce((total, line) => total + line.quantity, 0);
   const subtotal = cart.reduce((total, line) => total + line.product.price * line.quantity, 0);
@@ -75,7 +87,18 @@ export default function Home() {
 
   function openProduct(product: Product) {
     setSelected(product);
+    setFinish("Obsidian");
+    setImageMode("front");
     navigate("product");
+  }
+
+  function showNotice(message: string) {
+    setNotice(message);
+    window.setTimeout(() => setNotice(""), 2600);
+  }
+
+  function openInfo(title: string, body: string) {
+    setDialog({ title, body });
   }
 
   function addToCart(product: Product) {
@@ -84,8 +107,7 @@ export default function Home() {
       if (line) return current.map((item) => item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
       return [...current, { product, quantity: 1 }];
     });
-    setNotice(`${product.name} added to your bag`);
-    window.setTimeout(() => setNotice(""), 2400);
+    showNotice(`${product.name} added to your bag`);
   }
 
   function changeQuantity(productId: number, delta: number) {
@@ -101,6 +123,23 @@ export default function Home() {
   function submitSearch(event: React.FormEvent) {
     event.preventDefault();
     navigate("catalog");
+  }
+
+  function cycleSort() {
+    const next = sortModes[(sortModes.indexOf(sortMode) + 1) % sortModes.length];
+    setSortMode(next);
+    showNotice(`Products sorted by ${sortLabels[next].toLowerCase()}`);
+  }
+
+  function changeDeliveryPin() {
+    const next = window.prompt("Enter a 6-digit delivery PIN code", deliveryPin);
+    if (next === null) return;
+    if (!/^\d{6}$/.test(next.trim())) {
+      showNotice("Please enter a valid 6-digit PIN code");
+      return;
+    }
+    setDeliveryPin(next.trim());
+    showNotice(`Delivery location updated to ${next.trim()}`);
   }
 
   return (
@@ -132,6 +171,7 @@ export default function Home() {
       </div>
 
       {notice && <div className="toast" role="status">✓ {notice}</div>}
+      {dialog && <div className="dialog-backdrop" role="presentation" onClick={() => setDialog(null)}><section className="info-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" onClick={(event) => event.stopPropagation()}><span className="brand-mark" aria-hidden="true">N</span><h2 id="dialog-title">{dialog.title}</h2><p>{dialog.body}</p><button className="primary" onClick={() => setDialog(null)}>Got it</button></section></div>}
 
       <main id="main">
         {view === "home" && (
@@ -174,12 +214,12 @@ export default function Home() {
             <ProductSection title="Trending across India" subtitle="Recognisable technology, home and lifestyle favourites" products={products.slice(0, 4)} onOpen={openProduct} onAdd={addToCart} wishlist={wishlist} onWishlist={toggleWishlist} loading={loading} onAll={() => navigate("catalog")} />
 
             <section className="collection-grid wrap">
-              <article className="collection-card collection-blue" onClick={() => { setCategory("Computing"); navigate("catalog"); }}>
-                <div><span className="eyebrow">Work beautifully</span><h2>Tools for your next big idea.</h2><p>Focused technology for creating, learning and building.</p><button>Explore computing →</button></div>
+              <article className="collection-card collection-blue">
+                <div><span className="eyebrow">Work beautifully</span><h2>Tools for your next big idea.</h2><p>Focused technology for creating, learning and building.</p><button onClick={() => { setCategory("Computing"); navigate("catalog"); }}>Explore computing →</button></div>
                 <img src={fallbackProducts.find((product) => product.categoryName === "Computing")?.imageUrl} alt="Laptop collection" />
               </article>
-              <article className="collection-card collection-sand" onClick={() => { setCategory("Lifestyle"); navigate("catalog"); }}>
-                <div><span className="eyebrow">Move your way</span><h2>Comfort in every step.</h2><p>Everyday essentials made to keep up.</p><button>Shop lifestyle →</button></div>
+              <article className="collection-card collection-sand">
+                <div><span className="eyebrow">Move your way</span><h2>Comfort in every step.</h2><p>Everyday essentials made to keep up.</p><button onClick={() => { setCategory("Lifestyle"); navigate("catalog"); }}>Shop lifestyle →</button></div>
                 <img src={fallbackProducts.find((product) => product.categoryName === "Lifestyle")?.imageUrl} alt="Lifestyle collection" />
               </article>
             </section>
@@ -195,7 +235,7 @@ export default function Home() {
 
         {view === "catalog" && (
           <section className="catalog wrap">
-            <div className="page-heading"><div><span className="eyebrow">Nexora collection</span><h1>{query ? `Results for “${query}”` : category === "All" ? "Shop everything" : category}</h1><p>{filtered.length} thoughtfully selected products</p></div><button className="filter-button">Sort: Recommended ⌄</button></div>
+            <div className="page-heading"><div><span className="eyebrow">Nexora collection</span><h1>{query ? `Results for “${query}”` : category === "All" ? "Shop everything" : category}</h1><p>{filtered.length} thoughtfully selected products</p></div><button className="filter-button" onClick={cycleSort}>Sort: {sortLabels[sortMode]} ⌄</button></div>
             <div className="info-banner"><span>i</span><div><b>{usingDemoCatalog ? "India showcase catalogue" : "Live catalogue with India showcase expansion"}</b><p>Product models are real and sold in India. Prices, discounts, stock, ratings and reviews are representative portfolio data—not live retailer claims.</p></div></div>
             <div className="filter-chips" aria-label="Filter by category">
               {categories.map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}
@@ -209,17 +249,17 @@ export default function Home() {
             <button className="back-link" onClick={() => navigate("catalog")}>← Back to products</button>
             <div className="product-layout">
               <div className="product-gallery">
-                <div className="main-image"><span className="image-badge">{selected.badge ?? "Nexora select"}</span><img src={selected.imageUrl} alt={selected.name} /></div>
-                <div className="thumbnail-row"><button className="selected-thumb"><img src={selected.imageUrl} alt="Front view" /></button><button><img src={selected.imageUrl} alt="Detail view" /></button><button className="future-thumb">360°<small>Future</small></button></div>
+                <div className={`main-image ${imageMode === "detail" ? "detail-zoom" : ""}`}><span className="image-badge">{selected.badge ?? "Nexora select"}</span><img src={selected.imageUrl} alt={selected.name} /></div>
+                <div className="thumbnail-row"><button className={imageMode === "front" ? "selected-thumb" : ""} onClick={() => setImageMode("front")}><img src={selected.imageUrl} alt="Front view" /></button><button className={imageMode === "detail" ? "selected-thumb" : ""} onClick={() => setImageMode("detail")}><img src={selected.imageUrl} alt="Magnified detail view" /></button><button className="future-thumb" onClick={() => openInfo("360° product view", "Interactive 360° photography is planned for the production media service. The front and detail views are available now.")}>360°<small>Future</small></button></div>
               </div>
               <div className="product-info">
                 <span className="eyebrow">{selected.categoryName}</span>
                 <h1>{selected.name}</h1>
-                <button className="rating-link">★ {selected.rating} · {selected.reviews.toLocaleString("en-IN")} reviews</button>
+                <button className="rating-link" onClick={() => openInfo("Portfolio ratings", "Ratings and review totals are representative catalogue data. Verified customer review moderation is part of the production roadmap.")}>★ {selected.rating} · {selected.reviews.toLocaleString("en-IN")} reviews</button>
                 <p className="product-description">{selected.description}</p>
                 <div className="price-line"><strong>{money.format(selected.price)}</strong>{selected.previousPrice && <><del>{money.format(selected.previousPrice)}</del><span>Save {money.format(selected.previousPrice - selected.price)}</span></>}</div>
-                <div className="choice-block"><label>Finish</label><div className="swatches"><button className="swatch dark active" aria-label="Obsidian selected" /><button className="swatch light" aria-label="Porcelain" /><button className="swatch blue" aria-label="Sky" /></div><small>Obsidian</small></div>
-                <div className="delivery-card"><span aria-hidden="true">⌁</span><div><b>Delivery to 560001</b><p>Order today for priority delivery in 2–3 days.</p></div><button>Change</button></div>
+                <div className="choice-block"><label>Finish</label><div className="swatches"><button className={`swatch dark ${finish === "Obsidian" ? "active" : ""}`} onClick={() => setFinish("Obsidian")} aria-label="Choose Obsidian" /><button className={`swatch light ${finish === "Porcelain" ? "active" : ""}`} onClick={() => setFinish("Porcelain")} aria-label="Choose Porcelain" /><button className={`swatch blue ${finish === "Sky" ? "active" : ""}`} onClick={() => setFinish("Sky")} aria-label="Choose Sky" /></div><small>{finish}</small></div>
+                <div className="delivery-card"><span aria-hidden="true">⌁</span><div><b>Delivery to {deliveryPin}</b><p>Order today for priority delivery in 2–3 days.</p></div><button onClick={changeDeliveryPin}>Change</button></div>
                 <div className="purchase-actions"><button className="primary grow" onClick={() => addToCart(selected)}>Add to bag · {money.format(selected.price)}</button><button className={`wish-large ${wishlist.includes(selected.id) ? "liked" : ""}`} onClick={() => toggleWishlist(selected.id)} aria-label="Save to wishlist">♡</button></div>
                 <div className="assurance-list"><span>✓ 30-day easy returns</span><span>✓ 1-year manufacturer warranty</span><span>✓ Secure payment options</span></div>
                 <details open><summary>Highlights</summary><ul><li>Premium materials selected for everyday durability</li><li>Designed around intuitive, low-friction use</li><li>Reliable support through the Nexora account experience</li></ul></details>
@@ -236,7 +276,7 @@ export default function Home() {
             {cart.length === 0 ? <EmptyState title="Your bag is ready for something good" body="Explore thoughtfully selected products and add your favourites here." action="Start shopping" onAction={() => navigate("catalog")} /> : (
               <div className="bag-layout">
                 <div className="bag-lines">{cart.map((line) => <article className="bag-line" key={line.product.id}><img src={line.product.imageUrl} alt={line.product.name} /><div className="bag-line-info"><span>{line.product.categoryName}</span><h3>{line.product.name}</h3><p>Obsidian · In stock</p><div className="quantity"><button onClick={() => changeQuantity(line.product.id, -1)} aria-label={`Decrease ${line.product.name} quantity`}>−</button><b>{line.quantity}</b><button onClick={() => changeQuantity(line.product.id, 1)} aria-label={`Increase ${line.product.name} quantity`}>+</button></div></div><div className="bag-price"><strong>{money.format(line.product.price * line.quantity)}</strong><button onClick={() => changeQuantity(line.product.id, -line.quantity)}>Remove</button></div></article>)}</div>
-                <OrderSummary subtotal={subtotal} shipping={shipping} total={total} onCheckout={() => navigate("checkout")} />
+                <OrderSummary subtotal={subtotal} shipping={shipping} total={total} onCheckout={() => navigate("checkout")} onMessage={showNotice} />
               </div>
             )}
           </section>
@@ -253,18 +293,18 @@ export default function Home() {
                   <section className="form-card"><div className="form-title"><span>2</span><div><h2>Delivery address</h2><p>Choose where your order should arrive.</p></div></div><div className="field-grid"><label className="full">Address line<input placeholder="House number and street" /></label><label>City<input placeholder="Bengaluru" /></label><label>State<input placeholder="Karnataka" /></label><label>PIN code<input inputMode="numeric" placeholder="560001" /></label></div></section>
                   <section className="form-card"><div className="form-title"><span>3</span><div><h2>Payment method</h2><p>Payment processing connects to the secured backend workflow.</p></div></div><div className="payment-options"><label><input type="radio" name="payment" defaultChecked /><span>Card / UPI</span><small>Provider integration required for live payment</small></label><label><input type="radio" name="payment" /><span>Cash on delivery</span><small>Pay when your order arrives</small></label></div><button className="primary full-button" onClick={() => setNotice("Checkout UI validated; sign in and payment provider are required for live submission.")}>Review order · {money.format(total)}</button></section>
                 </div>
-                <OrderSummary subtotal={subtotal} shipping={shipping} total={total} compact onCheckout={() => setNotice("Order submission requires an authenticated customer session.")} />
+                <OrderSummary subtotal={subtotal} shipping={shipping} total={total} compact onCheckout={() => showNotice("Order submission requires an authenticated customer session.")} onMessage={showNotice} />
               </div>
             )}
           </section>
         )}
 
-        {view === "account" && <AccountView wishlistCount={wishlist.length} onShop={() => navigate("catalog")} />}
-        {view === "admin" && <AdminView products={products} onBack={() => navigate("home")} />}
+        {view === "account" && <AccountView wishlistCount={wishlist.length} onShop={() => navigate("catalog")} onAction={openInfo} />}
+        {view === "admin" && <AdminView products={products} onBack={() => navigate("home")} onAction={openInfo} />}
       </main>
 
       <footer>
-        <div className="footer-main wrap"><div className="footer-brand"><div className="brand"><span className="brand-mark">N</span><span>Nexora</span></div><p>Thoughtful products. Clear choices. A better way to shop.</p></div><div><h3>Shop</h3><button onClick={() => navigate("catalog")}>All products</button><button onClick={() => { setCategory("Phones"); navigate("catalog"); }}>Phones</button><button onClick={() => { setCategory("Computing"); navigate("catalog"); }}>Computing</button></div><div><h3>Support</h3><button>Help centre</button><button>Delivery & returns</button><button>Contact us</button></div><div><h3>About</h3><button>Our standards</button><button>Privacy</button><button>Terms</button></div></div>
+        <div className="footer-main wrap"><div className="footer-brand"><div className="brand"><span className="brand-mark">N</span><span>Nexora</span></div><p>Thoughtful products. Clear choices. A better way to shop.</p></div><div><h3>Shop</h3><button onClick={() => navigate("catalog")}>All products</button><button onClick={() => { setCategory("Phones"); navigate("catalog"); }}>Phones</button><button onClick={() => { setCategory("Computing"); navigate("catalog"); }}>Computing</button></div><div><h3>Support</h3><button onClick={() => openInfo("Help centre", "Browse products, manage your bag and explore checkout freely. Account-based order support becomes available when production authentication is connected.")}>Help centre</button><button onClick={() => openInfo("Delivery & returns", "The portfolio experience demonstrates tracked delivery and a 30-day return journey. Live carrier booking and return labels require production integrations.")}>Delivery & returns</button><button onClick={() => openInfo("Contact Nexora", "This is a portfolio storefront. A production contact channel and service desk are included in the launch roadmap.")}>Contact us</button></div><div><h3>About</h3><button onClick={() => openInfo("Our standards", "Nexora prioritises clear product information, accessible interaction, honest capability labels and low-friction shopping.")}>Our standards</button><button onClick={() => openInfo("Privacy", "This hosted preview does not collect or persist customer account or payment information. Device-local wishlist state clears when the session ends.")}>Privacy</button><button onClick={() => openInfo("Terms", "Catalogue prices, stock, ratings and reviews are representative portfolio data. No purchase contract is created by this preview.")}>Terms</button></div></div>
         <div className="footer-bottom wrap"><span>© 2026 Nexora Commerce</span><span>India · English</span><span>Portfolio product · Live capabilities are documented transparently</span></div>
       </footer>
     </div>
@@ -279,19 +319,24 @@ function ProductCard({ product, onOpen, onAdd, liked, onWishlist }: { product: P
   return <article className="product-card"><div className="product-image" onClick={() => onOpen(product)}>{product.badge && <span>{product.badge}</span>}<button className={liked ? "liked" : ""} onClick={(event) => { event.stopPropagation(); onWishlist(product.id); }} aria-label={liked ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`}>♡</button><img src={product.imageUrl} alt={product.name} loading="lazy" /></div><div className="product-meta"><small>{product.categoryName}</small><button className="product-name" onClick={() => onOpen(product)}>{product.name}</button><div className="rating">★ {product.rating} <span>({product.reviews})</span></div><div className="card-bottom"><div><strong>{money.format(product.price)}</strong>{product.previousPrice && <del>{money.format(product.previousPrice)}</del>}</div><button className="add-button" onClick={() => onAdd(product)} aria-label={`Add ${product.name} to bag`}>+</button></div></div></article>;
 }
 
-function OrderSummary({ subtotal, shipping, total, onCheckout, compact = false }: { subtotal: number; shipping: number; total: number; onCheckout: () => void; compact?: boolean }) {
-  return <aside className={`order-summary ${compact ? "compact" : ""}`}><h2>Order summary</h2><div><span>Subtotal</span><b>{money.format(subtotal)}</b></div><div><span>Delivery</span><b>{shipping ? money.format(shipping) : "Free"}</b></div><div><span>Estimated GST</span><b>Calculated by server</b></div><div className="summary-total"><span>Total</span><strong>{money.format(total)}</strong></div>{!compact && <label className="coupon"><input placeholder="Coupon code" /><button>Apply</button></label>}<button className="primary full-button" onClick={onCheckout}>{compact ? "Place order securely" : "Continue to checkout"}</button><p className="summary-note">♢ Secure checkout · Easy returns · No hidden fees</p></aside>;
+function OrderSummary({ subtotal, shipping, total, onCheckout, onMessage, compact = false }: { subtotal: number; shipping: number; total: number; onCheckout: () => void; onMessage: (message: string) => void; compact?: boolean }) {
+  const [coupon, setCoupon] = useState("");
+  function applyCoupon() {
+    if (!coupon.trim()) return onMessage("Enter a coupon code first");
+    onMessage(`Coupon “${coupon.trim().toUpperCase()}” checked—no active portfolio promotion found`);
+  }
+  return <aside className={`order-summary ${compact ? "compact" : ""}`}><h2>Order summary</h2><div><span>Subtotal</span><b>{money.format(subtotal)}</b></div><div><span>Delivery</span><b>{shipping ? money.format(shipping) : "Free"}</b></div><div><span>Estimated GST</span><b>Calculated by server</b></div><div className="summary-total"><span>Total</span><strong>{money.format(total)}</strong></div>{!compact && <label className="coupon"><input value={coupon} onChange={(event) => setCoupon(event.target.value)} placeholder="Coupon code" /><button onClick={applyCoupon}>Apply</button></label>}<button className="primary full-button" onClick={onCheckout}>{compact ? "Place order securely" : "Continue to checkout"}</button><p className="summary-note">♢ Secure checkout · Easy returns · No hidden fees</p></aside>;
 }
 
 function EmptyState({ title, body, action, onAction }: { title: string; body: string; action: string; onAction: () => void }) {
   return <div className="empty-state"><div aria-hidden="true">◇</div><h2>{title}</h2><p>{body}</p><button className="primary" onClick={onAction}>{action}</button></div>;
 }
 
-function AccountView({ wishlistCount, onShop }: { wishlistCount: number; onShop: () => void }) {
-  return <section className="account-page wrap"><div className="account-hero"><div><span className="eyebrow">Your Nexora</span><h1>Everything you need, in one calm place.</h1><p>Track orders, manage delivery details and return to products you love.</p><button className="primary">Sign in to your account</button></div><div className="account-avatar">SP</div></div><div className="account-grid"><article><span>□</span><h3>Orders</h3><p>Track delivery, download invoices and manage returns.</p><b>Backend ready →</b></article><article><span>♡</span><h3>Wishlist</h3><p>{wishlistCount} saved {wishlistCount === 1 ? "product" : "products"} on this device.</p><button onClick={onShop}>Browse products →</button></article><article><span>⌂</span><h3>Addresses</h3><p>Save delivery locations for faster checkout.</p><b>Backend ready →</b></article><article><span>♢</span><h3>Security</h3><p>Password management and protected account access.</p><b>Backend ready →</b></article></div><div className="info-banner"><span>i</span><div><b>Authentication integration boundary</b><p>The Java backend already implements JWT accounts. This hosted visual preview does not expose or fake a production sign-in session.</p></div></div></section>;
+function AccountView({ wishlistCount, onShop, onAction }: { wishlistCount: number; onShop: () => void; onAction: (title: string, body: string) => void }) {
+  return <section className="account-page wrap"><div className="account-hero"><div><span className="eyebrow">Your Nexora</span><h1>Everything you need, in one calm place.</h1><p>Track orders, manage delivery details and return to products you love.</p><button className="primary" onClick={() => onAction("Account sign-in", "The Java API supports JWT accounts. A production identity endpoint and secure hosted session are required before sign-in can be enabled on this public preview.")}>Sign in to your account</button></div><div className="account-avatar">SP</div></div><div className="account-grid"><article><span>□</span><h3>Orders</h3><p>Track delivery, download invoices and manage returns.</p><button onClick={() => onAction("Orders", "Order history becomes available after a verified customer session is connected to the Java order service.")}>Backend ready →</button></article><article><span>♡</span><h3>Wishlist</h3><p>{wishlistCount} saved {wishlistCount === 1 ? "product" : "products"} on this device.</p><button onClick={onShop}>Browse products →</button></article><article><span>⌂</span><h3>Addresses</h3><p>Save delivery locations for faster checkout.</p><button onClick={() => onAction("Saved addresses", "Address persistence is protected behind authentication and is ready for the production account integration.")}>Backend ready →</button></article><article><span>♢</span><h3>Security</h3><p>Password management and protected account access.</p><button onClick={() => onAction("Account security", "JWT authentication is implemented in the Java backend. Production password recovery and session management remain integration work.")}>Backend ready →</button></article></div><div className="info-banner"><span>i</span><div><b>Authentication integration boundary</b><p>The Java backend already implements JWT accounts. This hosted visual preview does not expose or fake a production sign-in session.</p></div></div></section>;
 }
 
-function AdminView({ products, onBack }: { products: Product[]; onBack: () => void }) {
+function AdminView({ products, onBack, onAction }: { products: Product[]; onBack: () => void; onAction: (title: string, body: string) => void }) {
   const stock = products.reduce((sum, product) => sum + product.stockQuantity, 0);
-  return <section className="admin-page wrap"><div className="admin-head"><div><button className="back-link" onClick={onBack}>← Storefront</button><span className="eyebrow">Operations centre</span><h1>Good morning, Surya.</h1><p>A focused view of commerce health and actions.</p></div><button className="primary">＋ Add product</button></div><div className="demo-label">Portfolio preview · Product and inventory figures reflect the active catalogue; revenue figures are illustrative.</div><div className="metric-grid"><article><span>Gross revenue</span><strong>₹8.42L</strong><small className="positive">↑ 12.4% illustrative</small></article><article><span>Orders</span><strong>1,284</strong><small className="positive">↑ 8.1% illustrative</small></article><article><span>Products</span><strong>{products.length}</strong><small>Live catalogue count</small></article><article><span>Units in stock</span><strong>{stock}</strong><small>Live catalogue total</small></article></div><div className="admin-columns"><section className="chart-card"><div className="section-heading"><div><h2>Revenue overview</h2><p>Illustrative seven-day trend</p></div><button>Last 7 days ⌄</button></div><div className="bar-chart" aria-label="Illustrative revenue bar chart">{[44, 62, 51, 78, 66, 91, 84].map((height, index) => <div key={index}><i style={{ height: `${height}%` }} /><span>{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index]}</span></div>)}</div></section><section className="activity-card"><div className="section-heading"><div><h2>Operational health</h2><p>Backend capabilities</p></div></div><ul><li><span className="status-dot green" /><div><b>Catalog administration</b><small>Create, update, activate and retire products</small></div><strong>Ready</strong></li><li><span className="status-dot green" /><div><b>Inventory protection</b><small>Transactional stock reservation and restoration</small></div><strong>Ready</strong></li><li><span className="status-dot green" /><div><b>Order lifecycle</b><small>Controlled fulfilment transitions</small></div><strong>Ready</strong></li><li><span className="status-dot amber" /><div><b>Payment provider</b><small>External signed webhook integration</small></div><strong>Roadmap</strong></li></ul></section></div><section className="inventory-table"><div className="section-heading"><div><h2>Inventory</h2><p>Live products loaded into this preview</p></div><button>View reports →</button></div><div className="table-head"><span>Product</span><span>Category</span><span>Stock</span><span>Status</span></div>{products.slice(0, 5).map((product) => <div className="table-row" key={product.id}><span><img src={product.imageUrl} alt="" /><b>{product.name}</b></span><span>{product.categoryName}</span><span>{product.stockQuantity}</span><span className={product.stockQuantity < 10 ? "low-stock" : "in-stock"}>{product.stockQuantity < 10 ? "Low stock" : "Healthy"}</span></div>)}</section></section>;
+  return <section className="admin-page wrap"><div className="admin-head"><div><button className="back-link" onClick={onBack}>← Storefront</button><span className="eyebrow">Operations centre</span><h1>Good morning, Surya.</h1><p>A focused view of commerce health and actions.</p></div><button className="primary" onClick={() => onAction("Add product", "Product creation is implemented in the protected Java admin API. This public preview intentionally does not expose privileged write access.")}>＋ Add product</button></div><div className="demo-label">Portfolio preview · Product and inventory figures reflect the active catalogue; revenue figures are illustrative.</div><div className="metric-grid"><article><span>Gross revenue</span><strong>₹8.42L</strong><small className="positive">↑ 12.4% illustrative</small></article><article><span>Orders</span><strong>1,284</strong><small className="positive">↑ 8.1% illustrative</small></article><article><span>Products</span><strong>{products.length}</strong><small>Live catalogue count</small></article><article><span>Units in stock</span><strong>{stock}</strong><small>Live catalogue total</small></article></div><div className="admin-columns"><section className="chart-card"><div className="section-heading"><div><h2>Revenue overview</h2><p>Illustrative seven-day trend</p></div><button onClick={() => onAction("Revenue timeframe", "The seven-day chart is illustrative. Live date ranges become available when the analytics event pipeline is connected.")}>Last 7 days ⌄</button></div><div className="bar-chart" aria-label="Illustrative revenue bar chart">{[44, 62, 51, 78, 66, 91, 84].map((height, index) => <div key={index}><i style={{ height: `${height}%` }} /><span>{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index]}</span></div>)}</div></section><section className="activity-card"><div className="section-heading"><div><h2>Operational health</h2><p>Backend capabilities</p></div></div><ul><li><span className="status-dot green" /><div><b>Catalog administration</b><small>Create, update, activate and retire products</small></div><strong>Ready</strong></li><li><span className="status-dot green" /><div><b>Inventory protection</b><small>Transactional stock reservation and restoration</small></div><strong>Ready</strong></li><li><span className="status-dot green" /><div><b>Order lifecycle</b><small>Controlled fulfilment transitions</small></div><strong>Ready</strong></li><li><span className="status-dot amber" /><div><b>Payment provider</b><small>External signed webhook integration</small></div><strong>Roadmap</strong></li></ul></section></div><section className="inventory-table"><div className="section-heading"><div><h2>Inventory</h2><p>Live products loaded into this preview</p></div><button onClick={() => onAction("Inventory reports", `The active catalogue contains ${products.length} products and ${stock} representative stock units. Exportable reporting is part of the authenticated admin roadmap.`)}>View reports →</button></div><div className="table-head"><span>Product</span><span>Category</span><span>Stock</span><span>Status</span></div>{products.slice(0, 5).map((product) => <div className="table-row" key={product.id}><span><img src={product.imageUrl} alt="" /><b>{product.name}</b></span><span>{product.categoryName}</span><span>{product.stockQuantity}</span><span className={product.stockQuantity < 10 ? "low-stock" : "in-stock"}>{product.stockQuantity < 10 ? "Low stock" : "Healthy"}</span></div>)}</section></section>;
 }
