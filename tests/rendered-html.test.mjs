@@ -45,6 +45,8 @@ test("server-renders the Nexora India storefront", async () => {
   );
   assert.match(html, /Home Appliances/);
   assert.match(html, /Personal Care/);
+  assert.match(html, /src="\/products\/samsung-galaxy-s26-ultra\.jpg"/);
+  assert.doesNotMatch(html, /\/_vinext\/image\?/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/i);
 });
 

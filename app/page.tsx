@@ -394,6 +394,7 @@ export default function Home() {
                   <span>Editor&apos;s choice</span>
                   <Image
                     src={products[0].imageUrl}
+                    unoptimized
                     alt={products[0].name}
                     width={700}
                     height={700}
@@ -482,6 +483,7 @@ export default function Home() {
                       (product) => product.categoryName === "Computing",
                     )?.imageUrl ?? fallbackProducts[0].imageUrl
                   }
+                  unoptimized
                   alt="Laptop collection"
                   width={700}
                   height={700}
@@ -507,6 +509,7 @@ export default function Home() {
                       (product) => product.categoryName === "Lifestyle",
                     )?.imageUrl ?? fallbackProducts[0].imageUrl
                   }
+                  unoptimized
                   alt="Lifestyle collection"
                   width={700}
                   height={700}
@@ -677,6 +680,7 @@ export default function Home() {
                         src={
                           line.configuration?.imageUrl ?? line.product.imageUrl
                         }
+                        unoptimized
                         alt={
                           line.configuration?.variantName ?? line.product.name
                         }
@@ -1288,6 +1292,7 @@ function CheckoutView({
                 <div className="upi-qr">
                   <Image
                     src="/upi-qr-surya.jpeg"
+                    unoptimized
                     alt={`UPI QR for ${instructions.merchantName}, ${instructions.merchantUpiId}`}
                     width={600}
                     height={800}
@@ -1492,6 +1497,7 @@ function ProductCard({
         </button>
         <Image
           src={product.imageUrl}
+          unoptimized
           alt={product.name}
           width={610}
           height={610}
@@ -1944,7 +1950,13 @@ function AdminView({
         {products.slice(0, 5).map((product) => (
           <div className="table-row" key={product.id}>
             <span>
-              <Image src={product.imageUrl} alt="" width={80} height={80} />
+              <Image
+                src={product.imageUrl}
+                unoptimized
+                alt=""
+                width={80}
+                height={80}
+              />
               <b>{product.name}</b>
             </span>
             <span>{product.categoryName}</span>

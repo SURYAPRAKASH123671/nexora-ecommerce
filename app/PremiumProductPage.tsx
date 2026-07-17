@@ -162,6 +162,7 @@ export default function PremiumProductPage({
             <Image
               key={selectedMedia.src}
               src={selectedMedia.src}
+              unoptimized
               alt={selectedMedia.alt}
               width={1200}
               height={1200}
@@ -182,6 +183,7 @@ export default function PremiumProductPage({
               >
                 <Image
                   src={item.src}
+                  unoptimized
                   alt=""
                   width={180}
                   height={180}
@@ -594,6 +596,7 @@ export default function PremiumProductPage({
           </button>
           <Image
             src={selectedMedia.src}
+            unoptimized
             alt={selectedMedia.alt}
             width={1536}
             height={1024}
@@ -692,6 +695,7 @@ function SpinViewer({
       >
         <Image
           src={frames[frame]}
+          unoptimized
           alt={`${productName} 360 degree frame ${frame + 1}`}
           width={1200}
           height={1200}
@@ -709,6 +713,7 @@ function SpinViewer({
             <Image
               key={src}
               src={src}
+              unoptimized
               alt=""
               width={1}
               height={1}
