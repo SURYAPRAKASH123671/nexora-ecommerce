@@ -64,37 +64,37 @@ export type ProductConfiguration = {
 
 const globalMedia: ProductMedia[] = [
   {
-    src: "/products/iphone-16/hero.jpg",
+    src: "/products/iphone-16/hero.webp",
     label: "Product family",
     alt: "Apple iPhone 16 and iPhone 16 Plus shown side by side",
   },
   {
-    src: "/products/iphone-16/lineup.jpg",
+    src: "/products/iphone-16/lineup.webp",
     label: "Lineup",
     alt: "Apple iPhone 16 lineup in Ultramarine",
   },
   {
-    src: "/products/iphone-16/finishes.jpg",
+    src: "/products/iphone-16/finishes.webp",
     label: "Finishes",
     alt: "Apple iPhone 16 finish lineup",
   },
   {
-    src: "/products/iphone-16/apple-intelligence.jpg",
+    src: "/products/iphone-16/apple-intelligence.webp",
     label: "Apple Intelligence",
     alt: "Apple iPhone 16 showing Apple Intelligence features",
   },
   {
-    src: "/products/iphone-16/camera-control-1.jpg",
+    src: "/products/iphone-16/camera-control-1.webp",
     label: "Camera Control",
     alt: "A person taking a photo with iPhone 16 Camera Control",
   },
   {
-    src: "/products/iphone-16/camera-control-2.jpg",
+    src: "/products/iphone-16/camera-control-2.webp",
     label: "Portrait capture",
     alt: "A person adjusting portrait settings with iPhone 16",
   },
   {
-    src: "/products/iphone-16/camera-control-3.jpg",
+    src: "/products/iphone-16/camera-control-3.webp",
     label: "Video capture",
     alt: "A person recording video with iPhone 16",
   },
@@ -103,22 +103,22 @@ const globalMedia: ProductMedia[] = [
 function iphoneMedia(colour: string, label: string): ProductMedia[] {
   return [
     {
-      src: `/products/iphone-16/${colour}-front.png`,
+      src: `/products/iphone-16/${colour}-front.webp`,
       label: "Front and back",
       alt: `Apple iPhone 16 in ${label}, front and back product view`,
     },
     {
-      src: `/products/iphone-16/${colour}-angle.jpg`,
+      src: `/products/iphone-16/${colour}-angle.webp`,
       label: "Angled view",
       alt: `Apple iPhone 16 in ${label}, angled product view`,
     },
     {
-      src: `/products/iphone-16/${colour}-side.jpg`,
+      src: `/products/iphone-16/${colour}-side.webp`,
       label: "Side profile",
       alt: `Apple iPhone 16 in ${label}, side profile`,
     },
     {
-      src: `/products/iphone-16/${colour}-box.jpg`,
+      src: `/products/iphone-16/${colour}-box.webp`,
       label: "In the box",
       alt: `Apple iPhone 16 in ${label} with box contents`,
     },

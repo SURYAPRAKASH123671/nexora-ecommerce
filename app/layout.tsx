@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-product.png",
+        url: "/og-product.jpg",
         width: 1536,
         height: 1024,
         alt: "Nexora — Real products. Verified details.",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Nexora — Thoughtfully chosen",
     description: "Good things, thoughtfully chosen.",
-    images: ["/og-product.png"],
+    images: ["/og-product.jpg"],
   },
 };
 
