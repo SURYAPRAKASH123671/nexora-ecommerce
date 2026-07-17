@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 async function render() {
@@ -41,4 +42,17 @@ test("catalog contains 80 India-market products across ten categories", async ()
   assert.match(catalog, /Prestige PIC 20 Induction Cooktop/);
   assert.match(catalog, /Mokobara Transit Backpack/);
   assert.match(catalog, /Made for India|Indian brand/);
+  assert.match(catalog, /\/products\/\$\{productSlug\(name\)\}\.webp/);
+});
+
+test("ships one unique local product image for every catalogue item", async () => {
+  const imageRoot = new URL("../public/products/", import.meta.url);
+  const files = (await readdir(imageRoot)).filter((file) => file.endsWith(".webp"));
+  const hashes = await Promise.all(files.map(async (file) => {
+    const bytes = await readFile(new URL(file, imageRoot));
+    return createHash("sha256").update(bytes).digest("hex");
+  }));
+
+  assert.equal(files.length, 80);
+  assert.equal(new Set(hashes).size, 80);
 });

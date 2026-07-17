@@ -1,0 +1,322 @@
+{
+  "samsung-galaxy-s26-ultra": {
+    "product": "Samsung Galaxy S26 Ultra",
+    "source": "https://www.mobiledokan.com/media/samsung-galaxy-s26-ultra-cobalt-violet-official-image.webp"
+  },
+  "apple-iphone-16": {
+    "product": "Apple iPhone 16",
+    "source": "https://www.apple.com/newsroom/images/2024/09/apple-introduces-iphone-16-and-iphone-16-plus/article/geo/Apple-iPhone-16-hero-geo-240909_inline.jpg.large_2x.jpg"
+  },
+  "google-pixel-9": {
+    "product": "Google Pixel 9",
+    "source": "https://static1.anpoimages.com/wordpress/wp-content/uploads/2024/08/google-pixel-9.png"
+  },
+  "oneplus-13": {
+    "product": "OnePlus 13",
+    "source": "https://oasis.opstatics.com/content/dam/oasis/page/2024/global/phones/13/specs/13-blue.png"
+  },
+  "xiaomi-15": {
+    "product": "Xiaomi 15",
+    "source": "https://i02.appmifile.com/mi-com-product/fly-birds/xiaomi-15-ultra/pc/classic.jpg?f"
+  },
+  "vivo-x200": {
+    "product": "vivo X200",
+    "source": "https://asia-exstatic-vivofs.vivo.com/PSee2l50xoirPK7y/1731663753870/82d60af9a082916d8876b9c70c2f39eb.png"
+  },
+  "nothing-phone-3a-pro": {
+    "product": "Nothing Phone (3a) Pro",
+    "source": "https://www.notebookcheck.net/fileadmin/Notebooks/News/_nc4/Nothing-Phone-3a-series-featured.jpg"
+  },
+  "motorola-edge-60-pro": {
+    "product": "Motorola Edge 60 Pro",
+    "source": "https://brmotorolanew.vtexassets.com/arquivos/ids/173819/frente-traseira-smartphone-motorola-edge-60-pro-cinza.png.png?v=638830335594700000"
+  },
+  "sony-wh-1000xm5": {
+    "product": "Sony WH-1000XM5",
+    "source": "https://img.freepik.com/premium-photo/isolated-sony-wh-1000xm5-wireless-headphones-front-view-featuring-white-background-clean_655090-801083.jpg?w=2000"
+  },
+  "bose-quietcomfort-ultra-headphones": {
+    "product": "Bose QuietComfort Ultra Headphones",
+    "source": "https://m.media-amazon.com/images/I/51NC9ErIQtL._AC_SL1500_.jpg"
+  },
+  "apple-airpods-pro-2nd-generation": {
+    "product": "Apple AirPods Pro (2nd generation)",
+    "source": "https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/MTJV3?wid=1200&hei=630&fmt=jpeg&qlt=95&.v=1694014871985"
+  },
+  "samsung-galaxy-buds3-pro": {
+    "product": "Samsung Galaxy Buds3 Pro",
+    "source": "https://pakistanstore.pk/wp-content/uploads/2024/12/Samsung-Galaxy-Buds3-Pro.jpg"
+  },
+  "jbl-flip-6": {
+    "product": "JBL Flip 6",
+    "source": "https://uk.jbl.com/dw/image/v2/BFND_PRD/on/demandware.static/-/Sites-masterCatalog_Harman/default/dw904b9434/pdp/JBL_Flip6_Black_Box_Image_GLOBAL_1605x1605px.png?sw=550&sh=550"
+  },
+  "marshall-emberton-iii": {
+    "product": "Marshall Emberton III",
+    "source": "https://images.ctfassets.net/javen7msabdh/5c8a9Qa7rzcz349m28KkJV/707c01dfe2a1ef4def07e3b8fd848966/emberton-iii-side-desktop-1.jpeg"
+  },
+  "apple-macbook-air-13-inch-m4": {
+    "product": "Apple MacBook Air 13-inch (M4)",
+    "source": "https://media.wired.com/photos/67d04e1c38d5984f21140ee2/master/w_1600%2Cc_limit/Apple-MacBook-Air-13-Inch-M4-2025-(front-open-screen-desktop)-Reviewer-Photo-SOURCE-Brenda-Stolyar.jpg"
+  },
+  "dell-xps-13": {
+    "product": "Dell XPS 13",
+    "source": "https://gurugoutam.com/wp-content/uploads/2025/03/XPS-13-7390-scaled.jpg"
+  },
+  "hp-spectre-x360-14": {
+    "product": "HP Spectre x360 14",
+    "source": "https://jp.ext.hp.com/content/dam/jp-ext-hp-com/jp/ja/ec/notebooks/personal/spectre_x360_14_ea0000/images/move7_full.jpg"
+  },
+  "lenovo-yoga-slim-7i": {
+    "product": "Lenovo Yoga Slim 7i",
+    "source": "https://i.gadgets360cdn.com/large/lenovo_yoga_slim_7i_carbon_image_1602481543864.jpg"
+  },
+  "asus-rog-zephyrus-g14": {
+    "product": "ASUS ROG Zephyrus G14",
+    "source": "https://i.pcmag.com/imagery/reviews/02Pdbp2MoRc1MIRlqXhxzbS-4.jpg"
+  },
+  "acer-swift-go-14": {
+    "product": "Acer Swift Go 14",
+    "source": "https://www.techspot.com/images/products/2023/laptops/org/2023-06-20-product.jpg"
+  },
+  "samsung-galaxy-book4-pro": {
+    "product": "Samsung Galaxy Book4 Pro",
+    "source": "https://media.ldlc.com/r1600/ld/products/00/06/18/42/LD0006184281.jpg"
+  },
+  "lenovo-loq-15": {
+    "product": "Lenovo LOQ 15",
+    "source": "https://microless.com/cdn/products/740e27baaec6ef77155186e12e4b9979-hi.jpg"
+  },
+  "apple-watch-series-10": {
+    "product": "Apple Watch Series 10",
+    "source": "https://www.apple.com/newsroom/images/2024/09/introducing-apple-watch-series-10/article/Apple-Watch-Series-10-aluminum-rose-gold-240909_inline.jpg.large_2x.jpg"
+  },
+  "samsung-galaxy-watch7": {
+    "product": "Samsung Galaxy Watch7",
+    "source": "https://image-us.samsung.com/us/galaxy-watch7/gallery/07022024/SCOMB6Q6-481-Galaxy-Watch7_Product-KV_2P_RGB-800x600.jpg?$product-details-jpg$"
+  },
+  "samsung-galaxy-watch-ultra": {
+    "product": "Samsung Galaxy Watch Ultra",
+    "source": "https://image-us.samsung.com/us/galaxy-watch-ultra/buy-spa/gallery-images/Galaxy-Watch-Ultra_Main-Product-KV_2P-Gallery-800x600.jpg?$product-details-jpg$"
+  },
+  "oneplus-watch-3": {
+    "product": "OnePlus Watch 3",
+    "source": "https://m.media-amazon.com/images/I/71+uzB9A-dL._AC_SL1500_.jpg"
+  },
+  "garmin-venu-3": {
+    "product": "Garmin Venu 3",
+    "source": "https://static1.anpoimages.com/wordpress/wp-content/uploads/2023/08/garmin-venu-3.jpg"
+  },
+  "fitbit-charge-6": {
+    "product": "Fitbit Charge 6",
+    "source": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/6559/6559662_rd.jpg"
+  },
+  "noise-colorfit-pro-6-max": {
+    "product": "Noise ColorFit Pro 6 Max",
+    "source": "https://www.gonoise.com/cdn/shop/files/Artboard_23_pro6max_grande.webp?v=1739277875"
+  },
+  "boat-lunar-discovery": {
+    "product": "boAt Lunar Discovery",
+    "source": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/ipvqeU9U-f-boat-lunar-discovery-smartwatch-494493248-i-1-1200wx1200h.jpeg"
+  },
+  "sony-alpha-7-iv": {
+    "product": "Sony Alpha 7 IV",
+    "source": "https://m.media-amazon.com/images/I/81jlDvZPMnL._AC_.jpg"
+  },
+  "canon-eos-r6-mark-ii": {
+    "product": "Canon EOS R6 Mark II",
+    "source": "https://i1.adis.ws/i/canon/5666C028_EOS-R6-Mark-II_07?w=940&bg=rgb(245,246,246)&fmt=webp&qlt=80&sm=aspect&aspect=1:1"
+  },
+  "nikon-z6-iii": {
+    "product": "Nikon Z6 III",
+    "source": "https://panamoz.com/media/catalog/product/cache/d13dbe7ef0a875570d9bbd273d23a84c/3/0/3017511m_1.jpg"
+  },
+  "fujifilm-x-t5": {
+    "product": "Fujifilm X-T5",
+    "source": "https://www.boushahritech.com/wp-content/uploads/2022/12/16783111_MAIN00_Image_X-T5_front_XF18-55_silver__61218.jpg"
+  },
+  "sony-zv-e10-ii": {
+    "product": "Sony ZV-E10 II",
+    "source": "https://britishcinematographer.co.uk/wp-content/uploads/2024/07/Sony-release.jpg"
+  },
+  "canon-eos-r50": {
+    "product": "Canon EOS R50",
+    "source": "https://i1.adis.ws/i/canon/5812C029_EOS-R50_03/canon-eos-r50-mirrorless-camera-white-and-rf-s-18-45mm-f4-5-6-3-is-stm-lens-product-front-view-with-lens?w=1500&bg=gray95"
+  },
+  "gopro-hero13-black": {
+    "product": "GoPro HERO13 Black",
+    "source": "https://m.media-amazon.com/images/I/615eTO83jLL.jpg"
+  },
+  "fujifilm-instax-mini-12": {
+    "product": "Fujifilm Instax Mini 12",
+    "source": "https://media.foto-erhardt.de/images/product_images/popup_images/545/fujifilm-instax-mini-12-mint-green-167817651654570304.jpg"
+  },
+  "samsung-bespoke-ai-refrigerator": {
+    "product": "Samsung Bespoke AI Refrigerator",
+    "source": "https://image-us.samsung.com/SamsungUS/home/home-appliances/refrigerators/4-door-flex/02082024/RF29DB9900QD_01_Stainless_Steel_SCOM.jpg"
+  },
+  "lg-instaview-door-in-door-refrigerator": {
+    "product": "LG InstaView Door-in-Door Refrigerator",
+    "source": "https://images.homedepot-static.com/productImages/edbdf95d-fe22-46c4-a9f0-d72e951786c9/svn/stainless-steel-lg-signature-french-door-refrigerators-lupxs3186n-64_1000.jpg"
+  },
+  "dyson-v12-detect-slim": {
+    "product": "Dyson V12 Detect Slim",
+    "source": "https://dyson-h.assetsadobe2.com/is/image/content/dam/dyson/leap-petite-global/products/floorcare/sticks/v12-detected-slim/overview/v12-Hero.jpg?$responsive$&cropPathE=desktop&fit=stretch,1&wid=1920"
+  },
+  "philips-airfryer-hd9252": {
+    "product": "Philips Airfryer HD9252",
+    "source": "https://images.philips.com/is/image/philipsconsumer/41063ecf7bbc47bd9a71ad13011e5979?$jpglarge$&wid=1250"
+  },
+  "ifb-neptune-vx-dishwasher": {
+    "product": "IFB Neptune VX Dishwasher",
+    "source": "https://5.imimg.com/data5/SELLER/Default/2024/3/397712092/XZ/SE/YB/42943769/ifb-place-settings-hot-water-wash-free-standing-dishwasher-neptune-vx-dark-silver-1000x1000.jpg"
+  },
+  "bosch-8-kg-front-load-washing-machine": {
+    "product": "Bosch 8 kg Front Load Washing Machine",
+    "source": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/bosch/491666720/0/i_KoiTKyCh-dIiZlXcqbu-Bosch-WAW24440IN-Washing-Machines-491666720-i-1-1200Wx1200H.jpeg"
+  },
+  "eureka-forbes-aquaguard-aura-ro-uv": {
+    "product": "Eureka Forbes Aquaguard Aura RO+UV",
+    "source": "https://m.media-amazon.com/images/I/61OcN54uhiL._SL1500_.jpg"
+  },
+  "voltas-1-5-ton-5-star-inverter-ac": {
+    "product": "Voltas 1.5 Ton 5 Star Inverter AC",
+    "source": "https://cdn.shopify.com/s/files/1/1480/0534/articles/electrical-sockets-around-the-world.jpg?v=1533071553"
+  },
+  "prestige-pic-20-induction-cooktop": {
+    "product": "Prestige PIC 20 Induction Cooktop",
+    "source": "https://mahajanelectronics.com/cdn/shop/files/Prestige_PIC_20_1600_Watts_Induction_Cooktop_4KV_Surge_Protection_8_Preset_Indian_Menu_Options_Timer_Soft_Touch_Button_Easy_to_Clean_Portable_Black_1Y_Warranty_BIS_Mahajan_Electronics_Online_1024x.png?v=1773330989"
+  },
+  "hawkins-contura-5-l-pressure-cooker": {
+    "product": "Hawkins Contura 5 L Pressure Cooker",
+    "source": "https://www.rdsons.com/image/cache/catalog/products/kitchenware/pressure-cookers/hawkins/contura-white/Hawkins-Contura-5-L-cooker-HC50/Hawkins-Contura-5-L-Pressure-Cooker-Aluminium-HC50-4-1000x1000h.jpg"
+  },
+  "wonderchef-nutri-blend-400-w": {
+    "product": "Wonderchef Nutri-blend 400 W",
+    "source": "https://5.imimg.com/data5/ECOM/Default/2022/12/ZH/TY/FJ/11228219/wonderchef-400-watt-nutri-blend-black-recipe-book-by-sanjeev-kapoor-wonderchef-nutriblend-5000-black-19537445060762-500x500.jpg"
+  },
+  "butterfly-smart-750-w-mixer-grinder": {
+    "product": "Butterfly Smart 750 W Mixer Grinder",
+    "source": "https://5.imimg.com/data5/IX/CN/KH/SELLER-39546977/butterfly-smart-750-watt-mixer-grinder-with-4-jar-grey--1000x1000.jpg"
+  },
+  "borosil-prima-30-l-otg": {
+    "product": "Borosil Prima 30 L OTG",
+    "source": "https://www.kochenessential.com/cdn/shop/products/2_3ab97fa0-46e0-4fff-8a9b-444c24d77709_1024x1024@2x.jpg?v=1628445071"
+  },
+  "milton-thermosteel-flip-lid-flask": {
+    "product": "Milton Thermosteel Flip Lid Flask",
+    "source": "https://adminneeds.in/wp-content/uploads/2021/10/thermosteel_350_flip_lid_red_640x640.jpeg"
+  },
+  "pigeon-by-stovekraft-handy-chopper": {
+    "product": "Pigeon by Stovekraft Handy Chopper",
+    "source": "https://lzd-img-global.slatic.net/g/p/677a44ff997133f1d7a27343d934c787.jpg_720x720q80.jpg_.webp"
+  },
+  "prestige-svachh-3-burner-gas-stove": {
+    "product": "Prestige Svachh 3-Burner Gas Stove",
+    "source": "https://m.media-amazon.com/images/I/61LL-bFtDOL.jpg"
+  },
+  "dyson-airwrap-i-d-multi-styler": {
+    "product": "Dyson Airwrap i.d. Multi-styler",
+    "source": "https://dyson-h.assetsadobe2.com/is/image/content/dam/dyson/leap-petite-global/dynamic-media/personal-care/q1-gifting/2025/mothers-day/aw/primary/Web_308F_T1T2_DPLSSVLBPI_Dynamic_primary_machine_Bundle.png"
+  },
+  "philips-series-7000-multigroom": {
+    "product": "Philips Series 7000 Multigroom",
+    "source": "https://m.media-amazon.com/images/I/71aq8CpsbgL._AC_SL1500_.jpg"
+  },
+  "braun-series-5-electric-shaver": {
+    "product": "Braun Series 5 Electric Shaver",
+    "source": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/5895/5895021_rd.jpg"
+  },
+  "beardo-beard-growth-essentials-kit": {
+    "product": "Beardo Beard Growth Essentials Kit",
+    "source": "https://beardo.in/cdn/shop/files/BeardStarterKit2160x2160FOP_2b8303f4-db84-429a-9568-0a79d88986c6.jpg?v=1699008329"
+  },
+  "mamaearth-vitamin-c-daily-glow-face-serum": {
+    "product": "Mamaearth Vitamin C Daily Glow Face Serum",
+    "source": "https://www.bbassets.com/media/uploads/p/l/40333315_1-mamaearth-vitamin-c-daily-glow-face-serum.jpg"
+  },
+  "minimalist-10-niacinamide-face-serum": {
+    "product": "Minimalist 10% Niacinamide Face Serum",
+    "source": "https://www.banglashoppers.com/media/catalog/product/cache/323f12c99b230d9cbd71d949e06824a6/m/i/minimalist_10_niacinamide_face_serum_30ml.jpg"
+  },
+  "bombay-shaving-company-trimmer": {
+    "product": "Bombay Shaving Company Trimmer",
+    "source": "http://www.bombayshavingcompany.com/cdn/shop/files/1_5_cfa52a76-868f-47f9-98ff-01a2aaf7c882.jpg?v=1698829607"
+  },
+  "havells-hd3201-hair-dryer": {
+    "product": "Havells HD3201 Hair Dryer",
+    "source": "https://cdn.shopclues.com/images1/detailed/99116/145341752-99116296-1555505890.jpg"
+  },
+  "microsoft-xbox-series-x": {
+    "product": "Microsoft Xbox Series X",
+    "source": "https://www.pricerunner.com/product/3009747019/Microsoft-Xbox-Series-X-Black-Edition.jpg"
+  },
+  "nintendo-switch-oled": {
+    "product": "Nintendo Switch OLED",
+    "source": "https://assets.nintendo.com/image/upload/c_fill,w_1200/q_auto:best/f_auto/dpr_2.0/ncom/en_US/products/merchandise/bundles/mario-strikers-battle-league-road-trip-bundle-115464-7/115461-switch-oled-white-console-front-1200x675"
+  },
+  "asus-rog-ally-x": {
+    "product": "ASUS ROG Ally X",
+    "source": "https://eezepc.com/wp-content/uploads/2024/08/ASUS-ROG-Ally-X-price-in-pakistan-eezepc-3.webp"
+  },
+  "logitech-g-pro-x-superlight-2": {
+    "product": "Logitech G Pro X Superlight 2",
+    "source": "https://resource.logitechg.com/d_transparent.gif/content/dam/gaming/en/products/pro-x-superlight-2/gallery-5-pro-x-superlight-2-gaming-mouse-white.png"
+  },
+  "razer-blackwidow-v4-x": {
+    "product": "Razer BlackWidow V4 X",
+    "source": "https://m.media-amazon.com/images/I/71qoXjgRb-L._AC_SL1500_.jpg"
+  },
+  "hyperx-cloud-iii-wireless": {
+    "product": "HyperX Cloud III Wireless",
+    "source": "https://down-id.img.susercontent.com/file/id-11134207-7r992-lvv7ndivlnre59"
+  },
+  "lg-ultragear-27-inch-qhd-gaming-monitor": {
+    "product": "LG UltraGear 27-inch QHD Gaming Monitor",
+    "source": "https://starcomp.in/wp-content/uploads/2025/02/27GN800-B.1.jpg"
+  },
+  "nike-air-zoom-pegasus-41": {
+    "product": "Nike Air Zoom Pegasus 41",
+    "source": "https://images.stockx.com/images/Nike-Air-Zoom-Pegasus-41-Multi-Color-Metallic-Silver-Womens.jpg?fit=fill&bg=FFFFFF&w=700&h=500&fm=webp&auto=compress&q=90&dpr=2&trim=color&updated_at=1738872576"
+  },
+  "adidas-ultraboost-5": {
+    "product": "adidas Ultraboost 5",
+    "source": "https://assets.adidas.com/images/w_1880,f_auto,q_auto/783e4f1d89c2424d9c137d9e00e51a86_9366/JQ2910_01_00_standard.jpg"
+  },
+  "wildcraft-wiki-45-l-rucksack": {
+    "product": "Wildcraft Wiki 45 L Rucksack",
+    "source": "https://wildcraft.com/media/catalog/product/2/_/2_2783.jpg"
+  },
+  "safari-thorium-neo-cabin-trolley": {
+    "product": "Safari Thorium Neo Cabin Trolley",
+    "source": "https://m.media-amazon.com/images/I/71CeIYFdrTL._AC_UY1100_.jpg"
+  },
+  "titan-neo-splash-analog-watch": {
+    "product": "Titan Neo Splash Analog Watch",
+    "source": "https://www.titan.co.in/on/demandware.static/-/Sites-titan-master-catalog/default/dw5b282ff9/images/Titan/Catalog/1805QM01_4.jpg"
+  },
+  "mokobara-transit-backpack": {
+    "product": "Mokobara Transit Backpack",
+    "source": "http://mokobara.com/cdn/shop/files/TheTransitBackpack30L_HomeGrownSunray1_921343bc-aeb0-4611-a49c-c0a46c99847e.jpg?v=1721974905&width=2048"
+  },
+  "oneplus-buds-pro-3": {
+    "product": "OnePlus Buds Pro 3",
+    "source": "https://image01.oneplus.net/media/202408/16/cf620b0ec66e27ef110de1f324a595b7.png?x-amz-process=image/format,webp/quality,Q_80"
+  },
+  "noise-air-buds-pro-6": {
+    "product": "Noise Air Buds Pro 6",
+    "source": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/SddaF6WrBj-noise-earbuds-494623537-i-1-1200wx1200h.jpeg"
+  },
+  "sony-playstation-5-slim": {
+    "product": "Sony PlayStation 5 Slim",
+    "source": "https://store.sony.com.au/dw/image/v2/ABBC_PRD/on/demandware.static/-/Sites-sony-master-catalog/default/dw7eb86f65/images/PLAYSTATION5WSLIM/PLAYSTATION5WSLIM_1.png"
+  },
+  "puma-palermo": {
+    "product": "PUMA Palermo",
+    "source": "https://media.sivasdescalzo.com/media/catalog/product/3/8/383011-07_sivasdescalzo-Puma-PALERMO_OG-1691076589-2.jpg?quality=70&auto=webp&fit=bounds&width=720"
+  },
+  "skechers-go-walk-7": {
+    "product": "Skechers GO WALK 7",
+    "source": "https://www.skechers.com.au/media/catalog/product/1/2/125207_nvlb_01.jpg?auto=webp&quality=85&format=pjpg&width=100%25&fit=cover"
+  }
+}

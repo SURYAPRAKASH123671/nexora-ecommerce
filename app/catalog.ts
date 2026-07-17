@@ -14,21 +14,11 @@ export type Product = {
 
 type ProductSeed = [name: string, description: string, price: number, previousPrice?: number, badge?: string];
 
-const categoryImages: Record<string, string> = {
-  Phones: "photo-1598327105666-5b89351aff97",
-  Audio: "photo-1505740420928-5e560c06d30e",
-  Computing: "photo-1496181133206-80ce9b88a853",
-  Wearables: "photo-1523275335684-37898b6baf30",
-  Lifestyle: "photo-1542291026-7eec264c27ff",
-  Cameras: "photo-1516035069371-29a1b244cc32",
-  "Home Appliances": "photo-1556911220-bff31c812dba",
-  Kitchen: "photo-1556910103-1c02745aae4d",
-  "Personal Care": "photo-1596462502278-27bfdc403348",
-  Gaming: "photo-1542751371-adc38448a05e",
-};
+function productSlug(value: string) {
+  return value.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
 
 function makeProducts(categoryName: string, startId: number, seeds: ProductSeed[]): Product[] {
-  const photo = categoryImages[categoryName];
   return seeds.map(([name, description, price, previousPrice, badge], index) => ({
     id: startId + index,
     name,
@@ -36,7 +26,7 @@ function makeProducts(categoryName: string, startId: number, seeds: ProductSeed[
     price,
     previousPrice,
     stockQuantity: 8 + ((startId + index) * 7) % 39,
-    imageUrl: `https://images.unsplash.com/${photo}?auto=format&fit=crop&w=1200&q=86&sig=${startId + index}`,
+    imageUrl: `/products/${productSlug(name)}.webp`,
     categoryName,
     rating: Number((4.3 + ((startId + index) % 6) / 10).toFixed(1)),
     reviews: 124 + ((startId + index) * 83) % 2400,
