@@ -1,0 +1,134 @@
+import { fallbackProducts } from "@/app/catalog";
+import {
+  commerceEnv,
+  errorResponse,
+  HttpError,
+  MERCHANT_NAME,
+  MERCHANT_UPI_ID,
+  requireSiteUser,
+  upiPaymentUri,
+} from "@/lib/site-commerce";
+
+type CheckoutPayload = {
+  paymentMethod?: "UPI" | "COD";
+  deliveryAddress?: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    line1?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  };
+  items?: Array<{ productId?: number; quantity?: number }>;
+};
+
+export async function POST(request: Request) {
+  try {
+    const user = requireSiteUser(request);
+    const payload = (await request.json()) as CheckoutPayload;
+    const address = payload.deliveryAddress;
+    if (
+      !address?.fullName?.trim() ||
+      !address.email?.trim() ||
+      !address.phone?.trim() ||
+      !address.line1?.trim() ||
+      !address.city?.trim() ||
+      !address.state?.trim() ||
+      !/^\d{5,6}$/.test(address.pincode ?? "")
+    ) {
+      throw new HttpError(
+        400,
+        "Complete all delivery fields and enter a valid PIN code.",
+      );
+    }
+    if (!payload.items?.length) throw new HttpError(400, "Your bag is empty.");
+    const quantityById = new Map<number, number>();
+    for (const item of payload.items) {
+      const id = Number(item.productId);
+      const quantity = Number(item.quantity);
+      if (
+        !Number.isInteger(id) ||
+        !Number.isInteger(quantity) ||
+        quantity < 1 ||
+        quantity > 10
+      )
+        throw new HttpError(400, "Invalid product quantity.");
+      quantityById.set(id, (quantityById.get(id) ?? 0) + quantity);
+    }
+    const selectedItems = [...quantityById].map(([id, quantity]) => {
+      const product = fallbackProducts.find((candidate) => candidate.id === id);
+      if (!product) throw new HttpError(400, `Product ${id} is unavailable.`);
+      return {
+        productId: id,
+        name: product.name,
+        imageUrl: product.imageUrl,
+        unitPrice: product.price,
+        quantity,
+        lineTotal: product.price * quantity,
+      };
+    });
+    const subtotalPaise = Math.round(
+      selectedItems.reduce((sum, item) => sum + item.lineTotal, 0) * 100,
+    );
+    const shippingPaise = subtotalPaise >= 500000 ? 0 : 9900;
+    const totalPaise = subtotalPaise + shippingPaise;
+    const orderNumber = `NX-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+    const paymentMethod = payload.paymentMethod === "COD" ? "COD" : "UPI";
+    const now = new Date().toISOString();
+    const { DB } = commerceEnv();
+    await DB.batch([
+      DB.prepare(
+        "INSERT INTO orders (order_number, customer_email, customer_name, delivery_json, items_json, payment_method, payment_status, order_status, subtotal_paise, shipping_paise, total_paise, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      ).bind(
+        orderNumber,
+        user.email,
+        address.fullName.trim(),
+        JSON.stringify(address),
+        JSON.stringify(selectedItems),
+        paymentMethod,
+        paymentMethod === "UPI" ? "PENDING" : "COD_PENDING",
+        "PLACED",
+        subtotalPaise,
+        shippingPaise,
+        totalPaise,
+        now,
+        now,
+      ),
+      DB.prepare(
+        "INSERT INTO order_history (order_number, event_type, from_value, to_value, actor_email, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      ).bind(
+        orderNumber,
+        "ORDER_STATUS",
+        "NEW",
+        "PLACED",
+        user.email,
+        "Order reference created",
+        now,
+      ),
+    ]);
+    return Response.json(
+      {
+        orderNumber,
+        total: totalPaise / 100,
+        status: "PLACED",
+        paymentStatus: paymentMethod === "UPI" ? "PENDING" : "COD_PENDING",
+        instructions:
+          paymentMethod === "UPI"
+            ? {
+                orderNumber,
+                amount: totalPaise / 100,
+                merchantName: MERCHANT_NAME,
+                merchantUpiId: MERCHANT_UPI_ID,
+                paymentUri: upiPaymentUri(orderNumber, totalPaise),
+                paymentStatus: "PENDING",
+                orderStatus: "PLACED",
+              }
+            : null,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    return errorResponse(error);
+  }
+}

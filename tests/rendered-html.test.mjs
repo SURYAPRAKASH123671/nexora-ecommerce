@@ -1,7 +1,20 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
+import { registerHooks } from "node:module";
 import test from "node:test";
+
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier === "cloudflare:workers") {
+      return {
+        url: "data:text/javascript,export%20const%20env%20%3D%20%7B%7D%3B",
+        shortCircuit: true,
+      };
+    }
+    return nextResolve(specifier, context);
+  },
+});
 
 async function render() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -64,4 +77,17 @@ test("every storefront button is wired to an action", async () => {
 
   assert.ok(buttonTags.length > 40);
   assert.deepEqual(inertButtons, []);
+});
+
+test("hosted checkout uses same-origin identity and protected payment routes", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const schema = await readFile(new URL("../db/schema.ts", import.meta.url), "utf8");
+
+  assert.match(page, /fetch\("\/api\/site\/session"/);
+  assert.match(page, /fetch\("\/api\/site\/orders"/);
+  assert.match(page, /fetch\("\/api\/site\/payment-proof"/);
+  assert.doesNotMatch(page, /api\/auth\/login|Bearer \$\{auth\.token\}/);
+  assert.match(schema, /sqliteTable\(\s*"orders"/);
+  assert.match(schema, /sqliteTable\(\s*"manual_upi_payments"/);
+  assert.match(schema, /sqliteTable\(\s*"order_history"/);
 });

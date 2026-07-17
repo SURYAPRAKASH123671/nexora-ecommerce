@@ -15,18 +15,17 @@ type SortMode = "recommended" | "price-low" | "price-high" | "rating";
 
 type CartLine = { product: Product; quantity: number };
 type AuthUser = {
-  id: number;
   name: string;
   email: string;
-  role: string;
-  emailVerified: boolean;
+  isAdmin: boolean;
 };
-type AuthSession = { token: string; user: AuthUser };
+type AuthSession = { user: AuthUser };
 type OrderCreated = {
   orderNumber: string;
   total: number;
   status: string;
   paymentStatus: string;
+  instructions?: UpiInstructions | null;
 };
 type UpiInstructions = {
   orderNumber: string;
@@ -51,8 +50,7 @@ type ManualPayment = {
   orderStatus: string;
 };
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 const money = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -75,7 +73,7 @@ const sortLabels: Record<SortMode, string> = {
 export default function Home() {
   const [view, setView] = useState<View>("home");
   const [products, setProducts] = useState<Product[]>(fallbackProducts);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(API_BASE));
   const [usingDemoCatalog, setUsingDemoCatalog] = useState(true);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
@@ -90,18 +88,10 @@ export default function Home() {
   const [finish, setFinish] = useState("Obsidian");
   const [imageMode, setImageMode] = useState<"front" | "detail">("front");
   const [deliveryPin, setDeliveryPin] = useState("560001");
-  const [auth, setAuth] = useState<AuthSession | null>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const saved = window.sessionStorage.getItem("nexora-auth");
-      return saved ? (JSON.parse(saved) as AuthSession) : null;
-    } catch {
-      window.sessionStorage.removeItem("nexora-auth");
-      return null;
-    }
-  });
+  const [auth, setAuth] = useState<AuthSession | null>(null);
 
   useEffect(() => {
+    if (!API_BASE) return;
     const controller = new AbortController();
     fetch(`${API_BASE}/api/products`, { signal: controller.signal })
       .then((response) => {
@@ -142,12 +132,21 @@ export default function Home() {
     return () => controller.abort();
   }, []);
 
-  function updateAuth(session: AuthSession | null) {
-    setAuth(session);
-    if (session)
-      window.sessionStorage.setItem("nexora-auth", JSON.stringify(session));
-    else window.sessionStorage.removeItem("nexora-auth");
-  }
+  useEffect(() => {
+    let active = true;
+    fetch("/api/site/session", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await readApiError(response));
+        return response.json();
+      })
+      .then((body: { user: AuthUser }) => {
+        if (active) setAuth({ user: body.user });
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -867,7 +866,6 @@ export default function Home() {
         {view === "account" && (
           <AccountView
             auth={auth}
-            onAuth={updateAuth}
             wishlistCount={wishlist.length}
             onShop={() => navigate("catalog")}
             onAction={openInfo}
@@ -919,7 +917,7 @@ export default function Home() {
               onClick={() =>
                 openInfo(
                   "Help centre",
-                  "Browse products, manage your bag and use authenticated checkout when the configured Java API is online.",
+                  "Browse products, manage your bag and use the secure ChatGPT sign-in checkout. Orders and payment evidence are stored by Nexora for manual verification.",
                 )
               }
             >
@@ -1065,7 +1063,7 @@ function CheckoutView({
     setError("");
     if (!auth)
       return setError(
-        "Sign in or create an account before creating a protected order reference.",
+        "Continue with ChatGPT before creating a protected order reference.",
       );
     if (
       !form.email ||
@@ -1082,11 +1080,10 @@ function CheckoutView({
     }
     setBusy(true);
     try {
-      const response = await fetch(`${API_BASE}/api/orders`, {
+      const response = await fetch("/api/site/orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${auth.token}`,
         },
         body: JSON.stringify({
           paymentMethod,
@@ -1122,13 +1119,9 @@ function CheckoutView({
         onComplete();
         return;
       }
-      const instructionResponse = await fetch(
-        `${API_BASE}/api/orders/${encodeURIComponent(created.orderNumber)}/payments/upi/instructions`,
-        { headers: { Authorization: `Bearer ${auth.token}` } },
-      );
-      if (!instructionResponse.ok)
-        throw new Error(await readApiError(instructionResponse));
-      setInstructions(await instructionResponse.json());
+      if (!created.instructions)
+        throw new Error("UPI instructions were not created.");
+      setInstructions(created.instructions);
       onMessage(`Secure payment reference ${created.orderNumber} created`);
     } catch (caught) {
       setError(
@@ -1150,17 +1143,14 @@ function CheckoutView({
     setBusy(true);
     try {
       const data = new FormData();
+      data.append("orderNumber", order.orderNumber);
       data.append("screenshot", screenshot);
       if (payerReference.trim())
         data.append("payerReference", payerReference.trim());
-      const response = await fetch(
-        `${API_BASE}/api/orders/${encodeURIComponent(order.orderNumber)}/payments/upi/proof`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${auth.token}` },
-          body: data,
-        },
-      );
+      const response = await fetch("/api/site/payment-proof", {
+        method: "POST",
+        body: data,
+      });
       if (!response.ok) throw new Error(await readApiError(response));
       await response.json();
       setSubmitted(true);
@@ -1726,64 +1716,15 @@ function EmptyState({
 
 function AccountView({
   auth,
-  onAuth,
   wishlistCount,
   onShop,
   onAction,
 }: {
   auth: AuthSession | null;
-  onAuth: (session: AuthSession | null) => void;
   wishlistCount: number;
   onShop: () => void;
   onAction: (title: string, body: string) => void;
 }) {
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-
-  async function authenticate(event: React.FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setMessage("");
-    try {
-      const response = await fetch(
-        `${API_BASE}/api/auth/${mode === "login" ? "login" : "signup"}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            mode === "login"
-              ? { email, password, rememberMe: false }
-              : { name, email, password },
-          ),
-        },
-      );
-      if (!response.ok) throw new Error(await readApiError(response));
-      const body = (await response.json()) as {
-        token: string | null;
-        user: AuthUser;
-        message: string;
-      };
-      if (!body.token)
-        return setMessage(
-          body.message || "Verify your email before signing in.",
-        );
-      onAuth({ token: body.token, user: body.user });
-      setPassword("");
-    } catch (caught) {
-      setMessage(
-        caught instanceof Error
-          ? caught.message
-          : "The account service is unavailable.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <section className="account-page wrap">
       <div className="account-hero">
@@ -1796,34 +1737,23 @@ function AccountView({
           </h1>
           <p>
             {auth
-              ? `${auth.user.email} · ${auth.user.role === "ROLE_ADMIN" ? "Administrator" : "Customer"}`
-              : "Sign in to create orders, submit payment proof and see private order history."}
+              ? `${auth.user.email} · ${auth.user.isAdmin ? "Administrator" : "Customer"}`
+              : "Continue with ChatGPT to create orders, submit payment proof and see private order history."}
           </p>
           {auth ? (
-            <button className="secondary" onClick={() => onAuth(null)}>
+            <a
+              className="secondary account-link"
+              href="/signout-with-chatgpt?return_to=%2F"
+            >
               Sign out
-            </button>
+            </a>
           ) : (
-            <div className="auth-tabs">
-              <button
-                className={mode === "login" ? "active" : ""}
-                onClick={() => {
-                  setMode("login");
-                  setMessage("");
-                }}
-              >
-                Sign in
-              </button>
-              <button
-                className={mode === "signup" ? "active" : ""}
-                onClick={() => {
-                  setMode("signup");
-                  setMessage("");
-                }}
-              >
-                Create account
-              </button>
-            </div>
+            <a
+              className="primary account-link"
+              href="/signin-with-chatgpt?return_to=%2F"
+            >
+              Continue with ChatGPT
+            </a>
           )}
         </div>
         <div className="account-avatar">
@@ -1838,65 +1768,22 @@ function AccountView({
         </div>
       </div>
       {!auth && (
-        <form className="auth-form" onSubmit={authenticate}>
+        <div className="auth-form platform-auth">
           <div>
-            <span className="eyebrow">
-              {mode === "login" ? "Welcome back" : "Join Nexora"}
-            </span>
-            <h2>
-              {mode === "login" ? "Sign in securely" : "Create your account"}
-            </h2>
+            <span className="eyebrow">Protected identity</span>
+            <h2>No separate Nexora password</h2>
             <p>
-              Your access token stays in this browser tab and is sent only to
-              the configured Nexora API.
+              Nexora uses your authenticated ChatGPT identity for this hosted
+              portfolio, so your password is never collected by this storefront.
             </p>
           </div>
-          <div>
-            {mode === "signup" && (
-              <label>
-                Full name
-                <input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  required
-                  maxLength={120}
-                />
-              </label>
-            )}
-            <label>
-              Email
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
-            </label>
-            <label>
-              Password
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-                minLength={8}
-              />
-              <small>At least 8 characters with a letter and number</small>
-            </label>
-            {message && (
-              <p className="form-error" role="alert">
-                {message}
-              </p>
-            )}
-            <button type="submit" className="primary full-button" disabled={busy}>
-              {busy
-                ? "Please wait…"
-                : mode === "login"
-                  ? "Sign in"
-                  : "Create account"}
-            </button>
-          </div>
-        </form>
+          <a
+            className="primary account-link"
+            href="/signin-with-chatgpt?return_to=%2F"
+          >
+            Continue securely
+          </a>
+        </div>
       )}
       <div className="account-grid">
         <article>
@@ -1910,7 +1797,7 @@ function AccountView({
               onAction(
                 "Order privacy",
                 auth
-                  ? "Your JWT-authenticated order APIs are connected. Checkout creates orders under this account."
+                  ? "Your authenticated Sites session is connected. Checkout creates durable orders under this identity."
                   : "Sign in first to access private order history.",
               )
             }
@@ -1935,7 +1822,7 @@ function AccountView({
             onClick={() =>
               onAction(
                 "Saved addresses",
-                "The Java profile API provides authenticated address persistence.",
+                "Order delivery details are saved with each authenticated order. A reusable address book remains separate from checkout.",
               )
             }
           >
@@ -1945,7 +1832,7 @@ function AccountView({
         <article>
           <span>♢</span>
           <h3>Security</h3>
-          <p>JWT access, BCrypt passwords and protected admin routes.</p>
+          <p>ChatGPT sign-in and server-enforced administrator routes.</p>
           <button
             onClick={() =>
               onAction(
@@ -1979,7 +1866,7 @@ function AdminView({
     (sum, product) => sum + product.stockQuantity,
     0,
   );
-  const isAdmin = auth?.user.role === "ROLE_ADMIN";
+  const isAdmin = auth?.user.isAdmin === true;
   return (
     <section className="admin-page wrap">
       <div className="admin-head">
@@ -1998,7 +1885,7 @@ function AdminView({
           onClick={() =>
             onAction(
               "Add product",
-              "Product creation remains available through the protected Java admin API.",
+              "Catalogue management is the next protected operation planned for this admin workspace.",
             )
           }
         >
@@ -2021,8 +1908,9 @@ function AdminView({
         <AdminPaymentPanel auth={auth} />
       )}
       <div className="demo-label">
-        Manual UPI review above is live when the configured Java API is online.
-        Catalogue counts below are live; revenue examples are illustrative.
+        Manual UPI review above uses protected hosted storage and administrator
+        identity. Catalogue counts below are live; revenue examples are
+        illustrative.
       </div>
       <div className="metric-grid">
         <article>
@@ -2177,10 +2065,7 @@ function AdminPaymentPanel({ auth }: { auth: AuthSession }) {
     setError("");
     try {
       const query = nextFilter === "ALL" ? "" : `?status=${nextFilter}`;
-      const response = await fetch(
-        `${API_BASE}/api/admin/payments/upi${query}`,
-        { headers: { Authorization: `Bearer ${auth.token}` } },
-      );
+      const response = await fetch(`/api/site/admin/payments${query}`);
       if (!response.ok) throw new Error(await readApiError(response));
       setPayments(await response.json());
     } catch (caught) {
@@ -2196,10 +2081,7 @@ function AdminPaymentPanel({ auth }: { auth: AuthSession }) {
 
   useEffect(() => {
     let active = true;
-    fetch(
-      `${API_BASE}/api/admin/payments/upi?status=PENDING_VERIFICATION`,
-      { headers: { Authorization: `Bearer ${auth.token}` } },
-    )
+    fetch("/api/site/admin/payments?status=PENDING_VERIFICATION")
       .then(async (response) => {
         if (!response.ok) throw new Error(await readApiError(response));
         return response.json();
@@ -2221,7 +2103,7 @@ function AdminPaymentPanel({ auth }: { auth: AuthSession }) {
     return () => {
       active = false;
     };
-  }, [auth.token]);
+  }, [auth.user.email]);
 
   async function review(
     payment: ManualPayment,
@@ -2237,17 +2119,11 @@ function AdminPaymentPanel({ auth }: { auth: AuthSession }) {
     );
     if (note === null) return;
     try {
-      const response = await fetch(
-        `${API_BASE}/api/admin/payments/upi/${payment.id}/review`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${auth.token}`,
-          },
-          body: JSON.stringify({ decision, note }),
-        },
-      );
+      const response = await fetch("/api/site/admin/review", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentId: payment.id, decision, note }),
+      });
       if (!response.ok) throw new Error(await readApiError(response));
       await loadPayments();
     } catch (caught) {
@@ -2259,17 +2135,11 @@ function AdminPaymentPanel({ auth }: { auth: AuthSession }) {
 
   async function advance(payment: ManualPayment, status: string) {
     try {
-      const response = await fetch(
-        `${API_BASE}/api/admin/orders/${encodeURIComponent(payment.orderNumber)}/status`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${auth.token}`,
-          },
-          body: JSON.stringify({ status }),
-        },
-      );
+      const response = await fetch("/api/site/admin/order-status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderNumber: payment.orderNumber, status }),
+      });
       if (!response.ok) throw new Error(await readApiError(response));
       await loadPayments();
     } catch (caught) {
@@ -2319,7 +2189,7 @@ function AdminPaymentPanel({ auth }: { auth: AuthSession }) {
         <div className="payment-review-grid">
           {payments.map((payment) => (
             <article className="payment-review" key={payment.id}>
-              <ProofImage payment={payment} token={auth.token} />
+              <ProofImage payment={payment} />
               <div className="payment-review-body">
                 <span
                   className={`review-status ${payment.reviewStatus.toLowerCase()}`}
@@ -2401,20 +2271,12 @@ function AdminPaymentPanel({ auth }: { auth: AuthSession }) {
   );
 }
 
-function ProofImage({
-  payment,
-  token,
-}: {
-  payment: ManualPayment;
-  token: string;
-}) {
+function ProofImage({ payment }: { payment: ManualPayment }) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState(false);
   useEffect(() => {
     let objectUrl = "";
-    fetch(`${API_BASE}${payment.proofUrl}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    fetch(payment.proofUrl)
       .then((response) => {
         if (!response.ok) throw new Error("Proof unavailable");
         return response.blob();
@@ -2427,7 +2289,7 @@ function ProofImage({
     return () => {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [payment.proofUrl, token]);
+  }, [payment.proofUrl]);
   return (
     <div className="proof-image">
       {url ? (
