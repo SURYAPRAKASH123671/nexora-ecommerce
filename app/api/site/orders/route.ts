@@ -1,4 +1,5 @@
 import { fallbackProducts } from "@/app/catalog";
+import { resolveConfigurationBySku } from "@/app/product-details";
 import {
   commerceEnv,
   errorResponse,
@@ -20,7 +21,11 @@ type CheckoutPayload = {
     state?: string;
     pincode?: string;
   };
-  items?: Array<{ productId?: number; quantity?: number }>;
+  items?: Array<{
+    productId?: number;
+    variantSku?: string;
+    quantity?: number;
+  }>;
 };
 
 export async function POST(request: Request) {
@@ -43,7 +48,10 @@ export async function POST(request: Request) {
       );
     }
     if (!payload.items?.length) throw new HttpError(400, "Your bag is empty.");
-    const quantityById = new Map<number, number>();
+    const quantities = new Map<
+      string,
+      { productId: number; variantSku?: string; quantity: number }
+    >();
     for (const item of payload.items) {
       const id = Number(item.productId);
       const quantity = Number(item.quantity);
@@ -54,20 +62,49 @@ export async function POST(request: Request) {
         quantity > 10
       )
         throw new HttpError(400, "Invalid product quantity.");
-      quantityById.set(id, (quantityById.get(id) ?? 0) + quantity);
-    }
-    const selectedItems = [...quantityById].map(([id, quantity]) => {
-      const product = fallbackProducts.find((candidate) => candidate.id === id);
-      if (!product) throw new HttpError(400, `Product ${id} is unavailable.`);
-      return {
+      const variantSku = item.variantSku?.trim() || undefined;
+      const key = `${id}:${variantSku ?? "standard"}`;
+      const current = quantities.get(key);
+      quantities.set(key, {
         productId: id,
-        name: product.name,
-        imageUrl: product.imageUrl,
-        unitPrice: product.price,
-        quantity,
-        lineTotal: product.price * quantity,
-      };
-    });
+        variantSku,
+        quantity: (current?.quantity ?? 0) + quantity,
+      });
+    }
+    const selectedItems = [...quantities.values()].map(
+      ({ productId, variantSku, quantity }) => {
+        const product = fallbackProducts.find(
+          (candidate) => candidate.id === productId,
+        );
+        if (!product)
+          throw new HttpError(400, `Product ${productId} is unavailable.`);
+        let configuration;
+        try {
+          configuration = resolveConfigurationBySku(product, variantSku);
+        } catch {
+          throw new HttpError(
+            400,
+            "The selected product configuration is invalid.",
+          );
+        }
+        if (configuration.stockQuantity < quantity) {
+          throw new HttpError(
+            409,
+            `${configuration.variantName} has only ${configuration.stockQuantity} units available.`,
+          );
+        }
+        return {
+          productId,
+          variantSku: configuration.sku,
+          variantName: configuration.variantName,
+          name: product.name,
+          imageUrl: configuration.imageUrl,
+          unitPrice: configuration.price,
+          quantity,
+          lineTotal: configuration.price * quantity,
+        };
+      },
+    );
     const subtotalPaise = Math.round(
       selectedItems.reduce((sum, item) => sum + item.lineTotal, 0) * 100,
     );

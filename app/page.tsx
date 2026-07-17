@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { categories, fallbackProducts, type Product } from "./catalog";
+import PremiumProductPage from "./PremiumProductPage";
+import type { ProductConfiguration } from "./product-details";
 
 type View =
   | "home"
@@ -13,7 +16,12 @@ type View =
   | "admin";
 type SortMode = "recommended" | "price-low" | "price-high" | "rating";
 
-type CartLine = { product: Product; quantity: number };
+type CartLine = {
+  key: string;
+  product: Product;
+  quantity: number;
+  configuration?: ProductConfiguration;
+};
 type AuthUser = {
   name: string;
   email: string;
@@ -49,8 +57,16 @@ type ManualPayment = {
   reviewerNote?: string;
   orderStatus: string;
 };
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+type ProductQuestion = {
+  id: number;
+  productId: number;
+  productName: string;
+  customerEmail: string;
+  question: string;
+  answer?: string;
+  status: string;
+  createdAt: string;
+};
 
 const money = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -73,7 +89,7 @@ const sortLabels: Record<SortMode, string> = {
 export default function Home() {
   const [view, setView] = useState<View>("home");
   const [products, setProducts] = useState<Product[]>(fallbackProducts);
-  const [loading, setLoading] = useState(Boolean(API_BASE));
+  const [loading, setLoading] = useState(true);
   const [usingDemoCatalog, setUsingDemoCatalog] = useState(true);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
@@ -85,46 +101,19 @@ export default function Home() {
     null,
   );
   const [sortMode, setSortMode] = useState<SortMode>("recommended");
-  const [finish, setFinish] = useState("Obsidian");
-  const [imageMode, setImageMode] = useState<"front" | "detail">("front");
-  const [deliveryPin, setDeliveryPin] = useState("560001");
   const [auth, setAuth] = useState<AuthSession | null>(null);
 
   useEffect(() => {
-    if (!API_BASE) return;
     const controller = new AbortController();
-    fetch(`${API_BASE}/api/products`, { signal: controller.signal })
+    fetch("/api/site/catalog", { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Catalog unavailable");
         return response.json();
       })
-      .then((data: Array<Record<string, unknown>>) => {
+      .then((data: Product[]) => {
         if (!Array.isArray(data) || data.length === 0) return;
-        const mapped = data.map((item, index) => ({
-          id: Number(item.id),
-          name: String(item.name),
-          description: String(item.description ?? ""),
-          price: Number(item.price),
-          stockQuantity: Number(item.stockQuantity ?? 0),
-          imageUrl: String(
-            item.imageUrl ||
-              fallbackProducts[index % fallbackProducts.length].imageUrl,
-          ),
-          categoryName: String(item.categoryName ?? "Collection"),
-          rating: 4.6 + (index % 4) / 10,
-          reviews: 86 + index * 47,
-          badge: index === 0 ? "Featured" : undefined,
-        }));
-        const liveNames = new Set(
-          mapped.map((product) => product.name.toLowerCase()),
-        );
-        setProducts([
-          ...mapped,
-          ...fallbackProducts.filter(
-            (product) => !liveNames.has(product.name.toLowerCase()),
-          ),
-        ]);
-        setSelected(mapped[0]);
+        setProducts(data);
+        setSelected(data[0]);
         setUsingDemoCatalog(false);
       })
       .catch(() => undefined)
@@ -173,7 +162,8 @@ export default function Home() {
 
   const cartCount = cart.reduce((total, line) => total + line.quantity, 0);
   const subtotal = cart.reduce(
-    (total, line) => total + line.product.price * line.quantity,
+    (total, line) =>
+      total + (line.configuration?.price ?? line.product.price) * line.quantity,
     0,
   );
   const shipping = subtotal > 5000 || subtotal === 0 ? 0 : 99;
@@ -186,8 +176,6 @@ export default function Home() {
 
   function openProduct(product: Product) {
     setSelected(product);
-    setFinish("Obsidian");
-    setImageMode("front");
     navigate("product");
   }
 
@@ -200,26 +188,38 @@ export default function Home() {
     setDialog({ title, body });
   }
 
-  function addToCart(product: Product) {
+  function addToCart(product: Product, configuration?: ProductConfiguration) {
+    const key = configuration?.sku ?? `product-${product.id}`;
+    if ((configuration?.stockQuantity ?? product.stockQuantity) < 1) {
+      showNotice("This configuration is currently unavailable");
+      return;
+    }
     setCart((current) => {
-      const line = current.find((item) => item.product.id === product.id);
+      const line = current.find((item) => item.key === key);
       if (line)
         return current.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
+          item.key === key ? { ...item, quantity: item.quantity + 1 } : item,
         );
-      return [...current, { product, quantity: 1 }];
+      return [...current, { key, product, configuration, quantity: 1 }];
     });
-    showNotice(`${product.name} added to your bag`);
+    showNotice(
+      `${configuration?.variantName ?? product.name} added to your bag`,
+    );
   }
 
-  function changeQuantity(productId: number, delta: number) {
+  function changeQuantity(lineKey: string, delta: number) {
     setCart((current) =>
       current
         .map((line) =>
-          line.product.id === productId
-            ? { ...line, quantity: line.quantity + delta }
+          line.key === lineKey
+            ? {
+                ...line,
+                quantity: Math.min(
+                  line.configuration?.stockQuantity ??
+                    line.product.stockQuantity,
+                  line.quantity + delta,
+                ),
+              }
             : line,
         )
         .filter((line) => line.quantity > 0),
@@ -244,20 +244,6 @@ export default function Home() {
       sortModes[(sortModes.indexOf(sortMode) + 1) % sortModes.length];
     setSortMode(next);
     showNotice(`Products sorted by ${sortLabels[next].toLowerCase()}`);
-  }
-
-  function changeDeliveryPin() {
-    const next = window.prompt(
-      "Enter a 6-digit delivery PIN code",
-      deliveryPin,
-    );
-    if (next === null) return;
-    if (!/^\d{6}$/.test(next.trim())) {
-      showNotice("Please enter a valid 6-digit PIN code");
-      return;
-    }
-    setDeliveryPin(next.trim());
-    showNotice(`Delivery location updated to ${next.trim()}`);
   }
 
   return (
@@ -406,7 +392,13 @@ export default function Home() {
                 <div className="orb orb-two" />
                 <div className="hero-card hero-card-main">
                   <span>Editor&apos;s choice</span>
-                  <img src={products[0].imageUrl} alt={products[0].name} />
+                  <Image
+                    src={products[0].imageUrl}
+                    alt={products[0].name}
+                    width={700}
+                    height={700}
+                    priority
+                  />
                   <div>
                     <b>{products[0].name}</b>
                     <small>{money.format(products[0].price)}</small>
@@ -484,13 +476,15 @@ export default function Home() {
                     Explore computing →
                   </button>
                 </div>
-                <img
+                <Image
                   src={
                     fallbackProducts.find(
                       (product) => product.categoryName === "Computing",
-                    )?.imageUrl
+                    )?.imageUrl ?? fallbackProducts[0].imageUrl
                   }
                   alt="Laptop collection"
+                  width={700}
+                  height={700}
                 />
               </article>
               <article className="collection-card collection-sand">
@@ -507,13 +501,15 @@ export default function Home() {
                     Shop lifestyle →
                   </button>
                 </div>
-                <img
+                <Image
                   src={
                     fallbackProducts.find(
                       (product) => product.categoryName === "Lifestyle",
-                    )?.imageUrl
+                    )?.imageUrl ?? fallbackProducts[0].imageUrl
                   }
                   alt="Lifestyle collection"
+                  width={700}
+                  height={700}
                 />
               </article>
             </section>
@@ -578,9 +574,10 @@ export default function Home() {
                     : "Live catalogue with India showcase expansion"}
                 </b>
                 <p>
-                  Product models are real and sold in India. Prices, discounts,
-                  stock, ratings and reviews are representative portfolio
-                  data—not live retailer claims.
+                  Product models are real. Verified listings expose sourced
+                  manufacturer specifications and media; unverified ratings are
+                  never displayed. Price and inventory are Nexora catalogue
+                  records, not live manufacturer stock.
                 </p>
               </div>
             </div>
@@ -623,145 +620,23 @@ export default function Home() {
         )}
 
         {view === "product" && (
-          <section className="product-page wrap">
-            <button className="back-link" onClick={() => navigate("catalog")}>
-              ← Back to products
-            </button>
-            <div className="product-layout">
-              <div className="product-gallery">
-                <div
-                  className={`main-image ${imageMode === "detail" ? "detail-zoom" : ""}`}
-                >
-                  <span className="image-badge">
-                    {selected.badge ?? "Nexora select"}
-                  </span>
-                  <img src={selected.imageUrl} alt={selected.name} />
-                </div>
-                <div className="thumbnail-row">
-                  <button
-                    className={imageMode === "front" ? "selected-thumb" : ""}
-                    onClick={() => setImageMode("front")}
-                  >
-                    <img src={selected.imageUrl} alt="Front view" />
-                  </button>
-                  <button
-                    className={imageMode === "detail" ? "selected-thumb" : ""}
-                    onClick={() => setImageMode("detail")}
-                  >
-                    <img src={selected.imageUrl} alt="Magnified detail view" />
-                  </button>
-                  <button
-                    className="future-thumb"
-                    onClick={() =>
-                      openInfo(
-                        "360° product view",
-                        "Interactive 360° photography is planned for the production media service. The front and detail views are available now.",
-                      )
-                    }
-                  >
-                    360°<small>Future</small>
-                  </button>
-                </div>
-              </div>
-              <div className="product-info">
-                <span className="eyebrow">{selected.categoryName}</span>
-                <h1>{selected.name}</h1>
-                <button
-                  className="rating-link"
-                  onClick={() =>
-                    openInfo(
-                      "Portfolio ratings",
-                      "Ratings and review totals are representative catalogue data. Verified customer review moderation is part of the production roadmap.",
-                    )
-                  }
-                >
-                  ★ {selected.rating} ·{" "}
-                  {selected.reviews.toLocaleString("en-IN")} reviews
-                </button>
-                <p className="product-description">{selected.description}</p>
-                <div className="price-line">
-                  <strong>{money.format(selected.price)}</strong>
-                  {selected.previousPrice && (
-                    <>
-                      <del>{money.format(selected.previousPrice)}</del>
-                      <span>
-                        Save{" "}
-                        {money.format(selected.previousPrice - selected.price)}
-                      </span>
-                    </>
-                  )}
-                </div>
-                <div className="choice-block">
-                  <label>Finish</label>
-                  <div className="swatches">
-                    <button
-                      className={`swatch dark ${finish === "Obsidian" ? "active" : ""}`}
-                      onClick={() => setFinish("Obsidian")}
-                      aria-label="Choose Obsidian"
-                    />
-                    <button
-                      className={`swatch light ${finish === "Porcelain" ? "active" : ""}`}
-                      onClick={() => setFinish("Porcelain")}
-                      aria-label="Choose Porcelain"
-                    />
-                    <button
-                      className={`swatch blue ${finish === "Sky" ? "active" : ""}`}
-                      onClick={() => setFinish("Sky")}
-                      aria-label="Choose Sky"
-                    />
-                  </div>
-                  <small>{finish}</small>
-                </div>
-                <div className="delivery-card">
-                  <span aria-hidden="true">⌁</span>
-                  <div>
-                    <b>Delivery to {deliveryPin}</b>
-                    <p>Order today for priority delivery in 2–3 days.</p>
-                  </div>
-                  <button onClick={changeDeliveryPin}>Change</button>
-                </div>
-                <div className="purchase-actions">
-                  <button
-                    className="primary grow"
-                    onClick={() => addToCart(selected)}
-                  >
-                    Add to bag · {money.format(selected.price)}
-                  </button>
-                  <button
-                    className={`wish-large ${wishlist.includes(selected.id) ? "liked" : ""}`}
-                    onClick={() => toggleWishlist(selected.id)}
-                    aria-label="Save to wishlist"
-                  >
-                    ♡
-                  </button>
-                </div>
-                <div className="assurance-list">
-                  <span>✓ 30-day easy returns</span>
-                  <span>✓ 1-year manufacturer warranty</span>
-                  <span>✓ Secure payment options</span>
-                </div>
-                <details open>
-                  <summary>Highlights</summary>
-                  <ul>
-                    <li>Premium materials selected for everyday durability</li>
-                    <li>Designed around intuitive, low-friction use</li>
-                    <li>
-                      Reliable support through the Nexora account experience
-                    </li>
-                  </ul>
-                </details>
-                <details>
-                  <summary>Specifications</summary>
-                  <p>
-                    Complete specifications are supplied by the product
-                    catalogue API when available.
-                  </p>
-                </details>
-              </div>
-            </div>
+          <>
+            <PremiumProductPage
+              key={selected.id}
+              product={selected}
+              liked={wishlist.includes(selected.id)}
+              onBack={() => navigate("catalog")}
+              onWishlist={toggleWishlist}
+              onAdd={addToCart}
+              onBuyNow={(product, configuration) => {
+                addToCart(product, configuration);
+                navigate("cart");
+              }}
+              onMessage={showNotice}
+            />
             <ProductSection
               title="Pairs well with"
-              subtitle="Frequently explored together"
+              subtitle="Complementary products from the Nexora catalogue"
               products={products
                 .filter((item) => item.id !== selected.id)
                 .slice(0, 4)}
@@ -772,7 +647,7 @@ export default function Home() {
               loading={false}
               onAll={() => navigate("catalog")}
             />
-          </section>
+          </>
         )}
 
         {view === "cart" && (
@@ -797,25 +672,35 @@ export default function Home() {
               <div className="bag-layout">
                 <div className="bag-lines">
                   {cart.map((line) => (
-                    <article className="bag-line" key={line.product.id}>
-                      <img
-                        src={line.product.imageUrl}
-                        alt={line.product.name}
+                    <article className="bag-line" key={line.key}>
+                      <Image
+                        src={
+                          line.configuration?.imageUrl ?? line.product.imageUrl
+                        }
+                        alt={
+                          line.configuration?.variantName ?? line.product.name
+                        }
+                        width={290}
+                        height={290}
                       />
                       <div className="bag-line-info">
                         <span>{line.product.categoryName}</span>
                         <h3>{line.product.name}</h3>
-                        <p>Obsidian · In stock</p>
+                        <p>
+                          {line.configuration
+                            ? `${line.configuration.colour} · ${line.configuration.storage} · ${line.configuration.sku}`
+                            : "Standard configuration"}
+                        </p>
                         <div className="quantity">
                           <button
-                            onClick={() => changeQuantity(line.product.id, -1)}
+                            onClick={() => changeQuantity(line.key, -1)}
                             aria-label={`Decrease ${line.product.name} quantity`}
                           >
                             −
                           </button>
                           <b>{line.quantity}</b>
                           <button
-                            onClick={() => changeQuantity(line.product.id, 1)}
+                            onClick={() => changeQuantity(line.key, 1)}
                             aria-label={`Increase ${line.product.name} quantity`}
                           >
                             +
@@ -824,11 +709,14 @@ export default function Home() {
                       </div>
                       <div className="bag-price">
                         <strong>
-                          {money.format(line.product.price * line.quantity)}
+                          {money.format(
+                            (line.configuration?.price ?? line.product.price) *
+                              line.quantity,
+                          )}
                         </strong>
                         <button
                           onClick={() =>
-                            changeQuantity(line.product.id, -line.quantity)
+                            changeQuantity(line.key, -line.quantity)
                           }
                         >
                           Remove
@@ -960,7 +848,7 @@ export default function Home() {
               onClick={() =>
                 openInfo(
                   "Privacy",
-                  "Account and payment-proof data is sent only to the configured Nexora API after authentication. Payment screenshots are available only to administrators. Wishlist state stays in this browser tab.",
+                  "Account, order and payment-proof data is stored by Nexora after authentication. Payment screenshots and customer questions are available only to authorised administrators. Wishlist state stays in this browser tab.",
                 )
               }
             >
@@ -970,7 +858,7 @@ export default function Home() {
               onClick={() =>
                 openInfo(
                   "Terms",
-                  "Catalogue ratings and reviews are representative portfolio data. A real order is created only when an authenticated API request succeeds.",
+                  "Nexora does not display fabricated ratings or manufacturer specifications. Prices and inventory are Nexora catalogue records. An order is created only after an authenticated server request succeeds, and UPI payments require manual verification.",
                 )
               }
             >
@@ -1099,11 +987,8 @@ function CheckoutView({
           },
           items: cart.map((line) => ({
             productId: line.product.id,
-            productName: line.product.name,
-            variant: "Obsidian",
-            imageUrl: line.product.imageUrl,
+            variantSku: line.configuration?.sku,
             quantity: line.quantity,
-            unitPrice: line.product.price,
           })),
           subtotal,
           gst: 0,
@@ -1401,9 +1286,11 @@ function CheckoutView({
               </div>
               <div className="upi-layout">
                 <div className="upi-qr">
-                  <img
+                  <Image
                     src="/upi-qr-surya.jpeg"
                     alt={`UPI QR for ${instructions.merchantName}, ${instructions.merchantUpiId}`}
+                    width={600}
+                    height={800}
                   />
                   <p>
                     This QR identifies the destination only. Enter the exact
@@ -1467,11 +1354,14 @@ function CheckoutView({
                   <small>PNG, JPEG or WebP · maximum 5 MB</small>
                 </label>
                 {screenshotPreview && (
-                  <img
-                    className="proof-preview"
-                    src={screenshotPreview}
-                    alt="Selected payment screenshot preview"
-                  />
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      className="proof-preview"
+                      src={screenshotPreview}
+                      alt="Selected payment screenshot preview"
+                    />
+                  </>
                 )}
                 <button
                   className="primary full-button"
@@ -1600,7 +1490,14 @@ function ProductCard({
         >
           ♡
         </button>
-        <img src={product.imageUrl} alt={product.name} loading="lazy" />
+        <Image
+          src={product.imageUrl}
+          alt={product.name}
+          width={610}
+          height={610}
+          loading="lazy"
+          sizes="(max-width: 760px) 50vw, 25vw"
+        />
       </div>
       <div className="product-meta">
         <small>{product.categoryName}</small>
@@ -1608,7 +1505,13 @@ function ProductCard({
           {product.name}
         </button>
         <div className="rating">
-          ★ {product.rating} <span>({product.reviews})</span>
+          {product.reviews > 0 ? (
+            <>
+              ★ {product.rating} <span>({product.reviews})</span>
+            </>
+          ) : (
+            <span>New listing · no verified reviews</span>
+          )}
         </div>
         <div className="card-bottom">
           <div>
@@ -1621,8 +1524,9 @@ function ProductCard({
             className="add-button"
             onClick={() => onAdd(product)}
             aria-label={`Add ${product.name} to bag`}
+            disabled={product.stockQuantity < 1}
           >
-            +
+            {product.stockQuantity < 1 ? "×" : "+"}
           </button>
         </div>
       </div>
@@ -1905,7 +1809,10 @@ function AdminView({
           </button>
         </div>
       ) : (
-        <AdminPaymentPanel auth={auth} />
+        <>
+          <AdminPaymentPanel auth={auth} />
+          <AdminQuestionPanel auth={auth} />
+        </>
       )}
       <div className="demo-label">
         Manual UPI review above uses protected hosted storage and administrator
@@ -2037,7 +1944,7 @@ function AdminView({
         {products.slice(0, 5).map((product) => (
           <div className="table-row" key={product.id}>
             <span>
-              <img src={product.imageUrl} alt="" />
+              <Image src={product.imageUrl} alt="" width={80} height={80} />
               <b>{product.name}</b>
             </span>
             <span>{product.categoryName}</span>
@@ -2271,6 +2178,117 @@ function AdminPaymentPanel({ auth }: { auth: AuthSession }) {
   );
 }
 
+function AdminQuestionPanel({ auth }: { auth: AuthSession }) {
+  const [questions, setQuestions] = useState<ProductQuestion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  async function loadQuestions() {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/site/admin/questions?status=PENDING");
+      if (!response.ok) throw new Error(await readApiError(response));
+      setQuestions((await response.json()) as ProductQuestion[]);
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Unable to load product questions.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/site/admin/questions?status=PENDING")
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await readApiError(response));
+        return response.json();
+      })
+      .then((data: ProductQuestion[]) => {
+        if (active) setQuestions(data);
+      })
+      .catch((caught) => {
+        if (active)
+          setError(
+            caught instanceof Error
+              ? caught.message
+              : "Unable to load product questions.",
+          );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [auth.user.email]);
+
+  async function answer(question: ProductQuestion) {
+    const responseText = window.prompt(
+      `Answer this question about ${question.productName}:\n\n${question.question}`,
+      "",
+    );
+    if (responseText === null) return;
+    try {
+      const response = await fetch("/api/site/admin/questions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: question.id, answer: responseText }),
+      });
+      if (!response.ok) throw new Error(await readApiError(response));
+      await loadQuestions();
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Answer could not be saved.",
+      );
+    }
+  }
+
+  return (
+    <section className="admin-questions">
+      <div className="section-heading">
+        <div>
+          <span className="eyebrow">Product support</span>
+          <h2>Pending customer questions</h2>
+          <p>
+            Answers are attributed to the administrator and published only after
+            review.
+          </p>
+        </div>
+        <button onClick={() => void loadQuestions()}>Refresh</button>
+      </div>
+      {error && <p className="form-error">{error}</p>}
+      {loading ? (
+        <p className="admin-empty">Loading questions…</p>
+      ) : questions.length === 0 ? (
+        <p className="admin-empty">No unanswered product questions.</p>
+      ) : (
+        <div className="admin-question-list">
+          {questions.map((question) => (
+            <article key={question.id}>
+              <div>
+                <span>{question.productName}</span>
+                <h3>{question.question}</h3>
+                <p>
+                  {question.customerEmail} ·{" "}
+                  {new Date(question.createdAt).toLocaleString("en-IN")}
+                </p>
+              </div>
+              <button className="primary" onClick={() => answer(question)}>
+                Answer
+              </button>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ProofImage({ payment }: { payment: ManualPayment }) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState(false);
@@ -2294,6 +2312,7 @@ function ProofImage({ payment }: { payment: ManualPayment }) {
     <div className="proof-image">
       {url ? (
         <a href={url} target="_blank" rel="noreferrer">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={url}
             alt={`Payment screenshot for ${payment.orderNumber}`}

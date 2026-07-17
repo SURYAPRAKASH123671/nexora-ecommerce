@@ -23,7 +23,9 @@ async function render() {
 
   return worker.fetch(
     new Request("http://localhost/", { headers: { accept: "text/html" } }),
-    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
+    {
+      ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) },
+    },
     { waitUntil() {}, passThroughOnException() {} },
   );
 }
@@ -37,14 +39,20 @@ test("server-renders the Nexora India storefront", async () => {
   assert.match(html, /<title>Nexora — Thoughtfully chosen<\/title>/i);
   assert.match(html, /Good things,/);
   assert.match(html, /Trending across India/);
-  assert.match(html, /A preview of 80 products available across the India showcase/);
+  assert.match(
+    html,
+    /A preview of 80 products available across the India showcase/,
+  );
   assert.match(html, /Home Appliances/);
   assert.match(html, /Personal Care/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/i);
 });
 
 test("catalog contains 80 India-market products across ten categories", async () => {
-  const catalog = await readFile(new URL("../app/catalog.ts", import.meta.url), "utf8");
+  const catalog = await readFile(
+    new URL("../app/catalog.ts", import.meta.url),
+    "utf8",
+  );
   const categoryGroups = catalog.match(/\.\.\.makeProducts\(/g) ?? [];
   const productSeeds = catalog.match(/^\s+\["/gm) ?? [];
 
@@ -60,28 +68,43 @@ test("catalog contains 80 India-market products across ten categories", async ()
 
 test("ships one unique local product image for every catalogue item", async () => {
   const imageRoot = new URL("../public/products/", import.meta.url);
-  const files = (await readdir(imageRoot)).filter((file) => file.endsWith(".webp"));
-  const hashes = await Promise.all(files.map(async (file) => {
-    const bytes = await readFile(new URL(file, imageRoot));
-    return createHash("sha256").update(bytes).digest("hex");
-  }));
+  const files = (await readdir(imageRoot)).filter((file) =>
+    file.endsWith(".webp"),
+  );
+  const hashes = await Promise.all(
+    files.map(async (file) => {
+      const bytes = await readFile(new URL(file, imageRoot));
+      return createHash("sha256").update(bytes).digest("hex");
+    }),
+  );
 
   assert.equal(files.length, 80);
   assert.equal(new Set(hashes).size, 80);
 });
 
 test("every storefront button is wired to an action", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
-  const buttonTags = page.match(/<button\b[^>]*>/g) ?? [];
-  const inertButtons = buttonTags.filter((tag) => !/\bonClick=/.test(tag) && !/\btype=["']submit["']/.test(tag));
+  const files = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/PremiumProductPage.tsx", import.meta.url), "utf8"),
+  ]);
+  const buttonTags = files.join("\n").match(/<button\b[^>]*>/g) ?? [];
+  const inertButtons = buttonTags.filter(
+    (tag) => !/\bonClick=/.test(tag) && !/\btype=["']submit["']/.test(tag),
+  );
 
   assert.ok(buttonTags.length > 40);
   assert.deepEqual(inertButtons, []);
 });
 
 test("hosted checkout uses same-origin identity and protected payment routes", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
-  const schema = await readFile(new URL("../db/schema.ts", import.meta.url), "utf8");
+  const page = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const schema = await readFile(
+    new URL("../db/schema.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /fetch\("\/api\/site\/session"/);
   assert.match(page, /fetch\("\/api\/site\/orders"/);
@@ -90,4 +113,66 @@ test("hosted checkout uses same-origin identity and protected payment routes", a
   assert.match(schema, /sqliteTable\(\s*"orders"/);
   assert.match(schema, /sqliteTable\(\s*"manual_upi_payments"/);
   assert.match(schema, /sqliteTable\(\s*"order_history"/);
+});
+
+test("iPhone 16 uses real colour-specific media and server-authoritative variants", async () => {
+  const details = await readFile(
+    new URL("../app/product-details.ts", import.meta.url),
+    "utf8",
+  );
+  const page = await readFile(
+    new URL("../app/PremiumProductPage.tsx", import.meta.url),
+    "utf8",
+  );
+  const orderRoute = await readFile(
+    new URL("../app/api/site/orders/route.ts", import.meta.url),
+    "utf8",
+  );
+  const imageRoot = new URL("../public/products/iphone-16/", import.meta.url);
+  const images = await readdir(imageRoot);
+  const hashes = await Promise.all(
+    images.map(async (file) => {
+      const bytes = await readFile(new URL(file, imageRoot));
+      return createHash("sha256").update(bytes).digest("hex");
+    }),
+  );
+
+  assert.equal((details.match(/skuCode: "[A-Z]+"/g) ?? []).length, 5);
+  assert.match(details, /Ultramarine/);
+  assert.match(details, /Teal/);
+  assert.match(details, /Pink/);
+  assert.match(details, /White/);
+  assert.match(details, /Black/);
+  assert.equal(images.length, 27);
+  assert.equal(new Set(hashes).size, 27);
+  assert.match(page, /frames\.length >= 24/);
+  assert.match(page, /Verified 360° media unavailable/);
+  assert.match(page, /\/api\/site\/questions/);
+  assert.match(orderRoute, /variantSku/);
+  assert.match(orderRoute, /resolveConfigurationBySku/);
+});
+
+test("catalog persistence covers normalized ecommerce product records", async () => {
+  const schema = await readFile(
+    new URL("../db/schema.ts", import.meta.url),
+    "utf8",
+  );
+  const requiredTables = [
+    "catalog_products",
+    "product_variants",
+    "product_inventory",
+    "product_media",
+    "product_specifications",
+    "product_offers",
+    "product_accessories",
+    "product_warranties",
+    "product_delivery",
+    "product_reviews",
+    "product_questions",
+    "product_faqs",
+  ];
+
+  for (const table of requiredTables) {
+    assert.match(schema, new RegExp(`sqliteTable\\(\\s*"${table}"`));
+  }
 });
