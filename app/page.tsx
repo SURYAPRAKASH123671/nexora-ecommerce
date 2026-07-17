@@ -5,6 +5,10 @@ import Image from "next/image";
 import { categories, fallbackProducts, type Product } from "./catalog";
 import PremiumProductPage from "./PremiumProductPage";
 import type { ProductConfiguration } from "./product-details";
+import SupportPage, {
+  ProfessionalFooter,
+  type InfoPage,
+} from "./SupportPages";
 
 type View =
   | "home"
@@ -13,7 +17,8 @@ type View =
   | "cart"
   | "checkout"
   | "account"
-  | "admin";
+  | "admin"
+  | "information";
 type SortMode = "recommended" | "price-low" | "price-high" | "rating";
 
 type CartLine = {
@@ -102,6 +107,53 @@ export default function Home() {
   );
   const [sortMode, setSortMode] = useState<SortMode>("recommended");
   const [auth, setAuth] = useState<AuthSession | null>(null);
+  const [infoPage, setInfoPage] = useState<InfoPage>("help-centre");
+
+  useEffect(() => {
+    const pages: InfoPage[] = [
+      "help-centre",
+      "delivery-returns",
+      "contact-us",
+      "our-standards",
+      "privacy-policy",
+      "terms-conditions",
+    ];
+    const syncFromUrl = () => {
+      const requested = new URL(window.location.href).searchParams.get("page");
+      if (requested && pages.includes(requested as InfoPage)) {
+        setInfoPage(requested as InfoPage);
+        setView("information");
+      } else if (window.location.search.includes("page=")) {
+        setView("home");
+      }
+    };
+    syncFromUrl();
+    window.addEventListener("popstate", syncFromUrl);
+    return () => window.removeEventListener("popstate", syncFromUrl);
+  }, []);
+
+  useEffect(() => {
+    const titles: Record<InfoPage, string> = {
+      "help-centre": "Help Centre",
+      "delivery-returns": "Delivery & Returns",
+      "contact-us": "Contact Us",
+      "our-standards": "Our Standards",
+      "privacy-policy": "Privacy Policy",
+      "terms-conditions": "Terms & Conditions",
+    };
+    document.title =
+      view === "information"
+        ? `${titles[infoPage]} | Nexora Commerce`
+        : "Nexora — Thoughtfully chosen";
+    const description = document.querySelector<HTMLMetaElement>(
+      'meta[name="description"]',
+    );
+    if (description)
+      description.content =
+        view === "information"
+          ? `Professional ${titles[infoPage]} information from Nexora Commerce India.`
+          : "A premium commerce experience for technology and lifestyle essentials.";
+  }, [view, infoPage]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -171,6 +223,15 @@ export default function Home() {
 
   function navigate(next: View) {
     setView(next);
+    if (next !== "information" && window.location.search.includes("page="))
+      window.history.pushState({}, "", window.location.pathname);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function navigateInfo(page: InfoPage) {
+    setInfoPage(page);
+    setView("information");
+    window.history.pushState({}, "", `/?page=${page}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -772,112 +833,21 @@ export default function Home() {
             onAction={openInfo}
           />
         )}
+        {view === "information" && (
+          <SupportPage
+            page={infoPage}
+            onHome={() => navigate("home")}
+            onNavigate={navigateInfo}
+            onMessage={showNotice}
+          />
+        )}
       </main>
 
-      <footer>
-        <div className="footer-main wrap">
-          <div className="footer-brand">
-            <div className="brand">
-              <span className="brand-mark">N</span>
-              <span>Nexora</span>
-            </div>
-            <p>Thoughtful products. Clear choices. A better way to shop.</p>
-          </div>
-          <div>
-            <h3>Shop</h3>
-            <button onClick={() => navigate("catalog")}>All products</button>
-            <button
-              onClick={() => {
-                setCategory("Phones");
-                navigate("catalog");
-              }}
-            >
-              Phones
-            </button>
-            <button
-              onClick={() => {
-                setCategory("Computing");
-                navigate("catalog");
-              }}
-            >
-              Computing
-            </button>
-          </div>
-          <div>
-            <h3>Support</h3>
-            <button
-              onClick={() =>
-                openInfo(
-                  "Help centre",
-                  "Browse products, manage your bag and use the secure ChatGPT sign-in checkout. Orders and payment evidence are stored by Nexora for manual verification.",
-                )
-              }
-            >
-              Help centre
-            </button>
-            <button
-              onClick={() =>
-                openInfo(
-                  "Delivery & returns",
-                  "The portfolio experience demonstrates tracked delivery and a 30-day return journey. Live carrier booking and return labels require production integrations.",
-                )
-              }
-            >
-              Delivery & returns
-            </button>
-            <button
-              onClick={() =>
-                openInfo(
-                  "Contact Nexora",
-                  "This is a portfolio storefront. A production contact channel and service desk are included in the launch roadmap.",
-                )
-              }
-            >
-              Contact us
-            </button>
-          </div>
-          <div>
-            <h3>About</h3>
-            <button
-              onClick={() =>
-                openInfo(
-                  "Our standards",
-                  "Nexora prioritises clear product information, accessible interaction, honest capability labels and low-friction shopping.",
-                )
-              }
-            >
-              Our standards
-            </button>
-            <button
-              onClick={() =>
-                openInfo(
-                  "Privacy",
-                  "Account, order and payment-proof data is stored by Nexora after authentication. Payment screenshots and customer questions are available only to authorised administrators. Wishlist state stays in this browser tab.",
-                )
-              }
-            >
-              Privacy
-            </button>
-            <button
-              onClick={() =>
-                openInfo(
-                  "Terms",
-                  "Nexora does not display fabricated ratings or manufacturer specifications. Prices and inventory are Nexora catalogue records. An order is created only after an authenticated server request succeeds, and UPI payments require manual verification.",
-                )
-              }
-            >
-              Terms
-            </button>
-          </div>
-        </div>
-        <div className="footer-bottom wrap">
-          <span>© 2026 Nexora Commerce</span>
-          <span>India · English</span>
-          <span>
-            Portfolio product · Live capabilities are documented transparently
-          </span>
-        </div>
-      </footer>
+      <ProfessionalFooter
+        onView={navigate}
+        onInfo={navigateInfo}
+        onMessage={showNotice}
+      />
     </div>
   );
 }
