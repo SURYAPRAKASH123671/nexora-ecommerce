@@ -178,3 +178,25 @@ test("catalog persistence covers normalized ecommerce product records", async ()
     assert.match(schema, new RegExp(`sqliteTable\\(\\s*"${table}"`));
   }
 });
+
+test("catalog API upgrades persisted WebP paths and bypasses stale media cache", async () => {
+  const page = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const route = await readFile(
+    new URL("../app/api/site/catalog/route.ts", import.meta.url),
+    "utf8",
+  );
+  const migration = await readFile(
+    new URL("../drizzle/0002_fix_catalog_media_paths.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(page, /\/api\/site\/catalog\?media=v2/);
+  assert.match(route, /imageUrl: row\.image_url\.replace/);
+  assert.match(route, /"Cache-Control": "no-store"/);
+  assert.match(migration, /UPDATE `catalog_products`/);
+  assert.match(migration, /UPDATE `product_variants`/);
+  assert.match(migration, /UPDATE `product_media`/);
+});

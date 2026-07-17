@@ -18,7 +18,10 @@ export async function GET() {
           ? row.previous_price_paise / 100
           : undefined,
         stockQuantity: row.stock_quantity,
-        imageUrl: row.image_url,
+        // Older seeded catalogues used WebP paths that the host served with a
+        // generic MIME type. Keep the API defensive while the data migration
+        // permanently upgrades those persisted records.
+        imageUrl: row.image_url.replace(/\.webp$/i, ".jpg"),
         categoryName: row.category_name,
         rating: 0,
         reviews: 0,
@@ -27,7 +30,7 @@ export async function GET() {
             ? "Verified details"
             : undefined,
       })),
-      { headers: { "Cache-Control": "public, max-age=120, s-maxage=600" } },
+      { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
     return errorResponse(error);

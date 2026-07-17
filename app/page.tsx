@@ -105,7 +105,7 @@ export default function Home() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/site/catalog", { signal: controller.signal })
+    fetch("/api/site/catalog?media=v2", { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Catalog unavailable");
         return response.json();

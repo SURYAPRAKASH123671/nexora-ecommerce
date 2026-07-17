@@ -15,6 +15,13 @@
       "when": 1784296955897,
       "tag": "0001_careful_living_tribunal",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784301003486,
+      "tag": "0002_fix_catalog_media_paths",
+      "breakpoints": true
     }
   ]
 }
