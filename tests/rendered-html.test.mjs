@@ -238,3 +238,11 @@ test("public crawler routes and sitemap expose dedicated product and policy page
   assert.match(sitemap, /\/categories\/grocery/);
   assert.equal((sitemap.match(/<url>/g) ?? []).length, 99);
 });
+
+test("worker applies production security and private-route crawler headers", async () => {
+  const worker = await readFile(new URL("../worker/index.ts", import.meta.url), "utf8");
+  assert.match(worker, /X-Content-Type-Options/);
+  assert.match(worker, /Strict-Transport-Security/);
+  assert.match(worker, /X-Robots-Tag/);
+  assert.match(worker, /noindex, nofollow/);
+});

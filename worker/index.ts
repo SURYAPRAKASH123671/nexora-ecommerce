@@ -41,9 +41,10 @@ const worker = {
   ): Promise<Response> {
     const url = new URL(request.url);
 
+    let response: Response;
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
-      return handleImageOptimization(
+      response = await handleImageOptimization(
         request,
         {
           fetchAsset: (path) =>
@@ -57,9 +58,19 @@ const worker = {
         },
         allowedWidths,
       );
+    } else {
+      response = await handler.fetch(request, env, ctx);
     }
-
-    return handler.fetch(request, env, ctx);
+    const secured = new Response(response.body, response);
+    secured.headers.set("X-Content-Type-Options", "nosniff");
+    secured.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    secured.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    secured.headers.set("X-Frame-Options", "SAMEORIGIN");
+    secured.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+    if (["/admin", "/account", "/checkout"].some((path) => url.pathname.startsWith(path))) {
+      secured.headers.set("X-Robots-Tag", "noindex, nofollow");
+    }
+    return secured;
   },
 };
 
