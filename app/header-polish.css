@@ -1,20 +1,36 @@
 .topbar {
-  height: 80px;
+  width: min(1380px, calc(100% - 24px));
+  height: 76px;
+  margin: 10px auto 0;
+  padding-inline: clamp(16px, 2.2vw, 30px);
+  border: 1px solid rgba(218, 224, 234, .78);
+  border-radius: 24px;
+  top: 8px;
   gap: clamp(18px, 2.2vw, 32px);
   border-bottom-color: rgba(218, 224, 234, .78);
   background: rgba(255, 255, 255, .88);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  transition: box-shadow 220ms ease, background 220ms ease, border-color 220ms ease;
+  will-change: height, transform;
+  transition: height 240ms var(--ease-premium), box-shadow 220ms ease, background 220ms ease, border-color 220ms ease, transform 240ms var(--ease-premium);
 }
-.topbar-scrolled { border-bottom-color: transparent; background: rgba(255,255,255,.94); box-shadow: 0 10px 32px rgba(23,33,58,.09), 0 1px rgba(23,33,58,.05); }
+.topbar-scrolled { height: 66px; border-color: rgba(218,224,234,.6); background: rgba(255,255,255,.9); box-shadow: 0 16px 44px rgba(23,33,58,.11), 0 1px rgba(23,33,58,.05); }
 .brand { min-width: max-content; min-height: 48px; border-radius: 14px; padding: 6px 8px 6px 4px; transition: color 200ms ease, transform 200ms var(--ease-premium), background 200ms ease; }
 .brand:hover { color: var(--blue); background: rgba(22,93,255,.055); transform: translateY(-1px); }
 .brand:active { transform: scale(.98); }
-.brand-mark { transition: transform 220ms var(--ease-premium), box-shadow 220ms ease; }
+.brand-mark { position: relative; isolation: isolate; overflow: hidden; animation: nexora-logo-arrive 620ms var(--ease-premium) both; transition: transform 220ms var(--ease-premium), box-shadow 220ms ease; }
+.brand-mark > span { position: relative; z-index: 2; }
+.brand-mark > i { position: absolute; inset: -45%; z-index: 1; background: linear-gradient(105deg,transparent 35%,rgba(255,255,255,.72) 48%,transparent 61%); transform: translateX(-75%) rotate(8deg); transition: transform 520ms var(--ease-premium); }
+.brand:hover .brand-mark > i, .brand:focus-visible .brand-mark > i { transform: translateX(72%) rotate(8deg); }
+.brand::after { position: absolute; inset: 50%; content: ""; border-radius: 999px; background: rgba(22,93,255,.12); opacity: 0; transform: translate(-50%,-50%) scale(.2); pointer-events: none; }
+.brand:active::after { opacity: 1; transform: translate(-50%,-50%) scale(1.4); transition: transform 300ms ease, opacity 420ms ease; }
+.brand-word { transition: letter-spacing 220ms var(--ease-premium), transform 220ms var(--ease-premium); }
+.brand:hover .brand-word { letter-spacing: -.35px; transform: translateX(1px); }
+.topbar-scrolled .brand-mark { transform: scale(.9); }
+.topbar-scrolled .brand:hover .brand-mark { transform: rotate(-3deg) scale(.94); }
 .brand:hover .brand-mark { transform: rotate(-3deg) scale(1.04); box-shadow: 0 10px 24px rgba(22,93,255,.28); }
 
-.search { position: relative; z-index: 55; height: 48px; max-width: 680px; padding: 0 9px 0 16px; gap: 9px; border-color: rgba(214,221,232,.7); background: #f3f6fa; }
+.search { position: relative; z-index: 55; height: 48px; max-width: 680px; padding: 0 9px 0 16px; gap: 9px; border-color: rgba(214,221,232,.7); background: #f3f6fa; transform-origin: center; }
 .search.search-open, .search:focus-within { z-index: 70; border-color: #a8c0f7; background: #fff; box-shadow: 0 0 0 4px rgba(22,93,255,.09), 0 12px 34px rgba(23,33,58,.09); }
 .search-leading { width: 19px; height: 19px; flex: 0 0 auto; stroke-width: 1.8; color: #63708a; }
 .search input { width: 100%; min-width: 70px; height: 46px; font-size: 14px; letter-spacing: -.01em; }
@@ -46,7 +62,12 @@
 .search-empty b { color: var(--ink); font-size: 13px; }
 .search-empty span { font-size: 10px; }
 
-.header-actions { align-items: center; gap: 2px; }
+.header-actions { position: relative; align-items: center; gap: 2px; }
+.header-actions::before { position: absolute; bottom: -4px; left: 64px; width: 58px; height: 3px; content: ""; border-radius: 999px; background: var(--blue); opacity: 0; transform: translateX(0) scaleX(.58); transition: transform 260ms var(--ease-premium), opacity 180ms ease; }
+.header-actions[data-active="catalog"]::before { opacity: 1; transform: translateX(0) scaleX(.58); }
+.header-actions[data-active="account"]::before { opacity: 1; transform: translateX(64px) scaleX(.58); }
+.header-actions[data-active="compare"]::before { opacity: 1; transform: translateX(128px) scaleX(.58); }
+.header-actions[data-active="cart"]::before { opacity: 1; transform: translateX(192px) scaleX(.58); }
 .header-actions button { min-width: 62px; min-height: 54px; justify-content: center; border-radius: 14px; padding: 7px 9px; color: #34405a; transition: color 200ms ease, background 200ms ease, transform 200ms var(--ease-premium); }
 .header-actions button::after { position: absolute; inset: 50%; content: ""; border-radius: 50%; background: rgba(22,93,255,.13); opacity: 0; transform: translate(-50%,-50%) scale(0); }
 .header-actions button:active::after { opacity: 1; transform: translate(-50%,-50%) scale(4); transition: transform 0s, opacity 300ms ease; }
@@ -57,7 +78,8 @@
 .header-actions button.active { color: var(--blue); background: #edf3ff; }
 .cart-action b, .compare-action b { top: 2px; right: 3px; min-width: 18px; height: 18px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 999px; background: var(--blue); color: #fff; font-size: 9px; line-height: 1; }
 
-.category-strip { position: sticky; top: 80px; z-index: 45; height: 48px; gap: clamp(18px, 2.2vw, 30px); background: rgba(255,255,255,.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); scroll-snap-type: x proximity; }
+.category-strip { position: sticky; top: 92px; z-index: 45; height: 48px; gap: clamp(18px, 2.2vw, 30px); margin-top: 8px; background: rgba(255,255,255,.88); backdrop-filter: saturate(160%) blur(18px); -webkit-backdrop-filter: saturate(160%) blur(18px); scroll-snap-type: x proximity; transition: top 240ms var(--ease-premium), box-shadow 220ms ease; }
+.topbar-scrolled + .category-strip { top: 82px; box-shadow: 0 8px 24px rgba(23,33,58,.05); }
 .category-strip button { min-height: 47px; flex: 0 0 auto; padding: 0 1px; scroll-snap-align: start; color: #59657c; font-size: 12px; font-weight: 570; transition: color 200ms ease; }
 .category-strip button::after { bottom: 0; height: 2px; }
 .category-strip button:hover, .category-strip button.active { color: var(--blue); }
@@ -65,22 +87,39 @@
 
 @keyframes header-spin { to { transform: rotate(360deg); } }
 @keyframes voice-pulse { 50% { box-shadow: 0 0 0 5px rgba(22,93,255,.12); } }
+@keyframes nexora-logo-arrive { from { opacity: 0; transform: translateY(-8px) scale(.82) rotate(-8deg); } 65% { transform: translateY(1px) scale(1.04) rotate(2deg); } }
+
+.mobile-theme-toggle, .mobile-bottom-nav { display: none; }
 
 @media (max-width: 1050px) {
   .topbar { gap: 12px; padding-inline: 18px; }
   .search { max-width: none; }
+  .header-actions::before { display: none; }
   .header-actions button { min-width: 51px; padding-inline: 6px; }
   .header-actions button > span:last-of-type { display: none; }
 }
 @media (max-width: 720px) {
-  .topbar { min-height: 126px; padding: 9px 14px 10px; align-content: center; row-gap: 8px; }
+  .topbar, .topbar-scrolled { width: calc(100% - 16px); height: auto; min-height: 112px; margin-top: 6px; padding: 8px 10px 10px; align-content: center; row-gap: 7px; border-radius: 22px; }
   .brand { order: 1; }
-  .header-actions { order: 2; margin-left: auto; }
+  .header-actions { display: none; }
+  .mobile-theme-toggle { order: 2; width: 42px; height: 42px; display: grid; place-items: center; margin-left: auto; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+  .mobile-theme-toggle:hover, .mobile-theme-toggle:focus-visible { background: #edf3ff; color: var(--blue); }
+  .mobile-theme-toggle svg { width: 20px; }
   .search { order: 3; flex-basis: 100%; height: 44px; }
   .search input { height: 42px; font-size: 13px; }
-  .category-strip { top: 126px; height: 45px; padding-inline: 14px; gap: 22px; }
+  .category-strip, .topbar-scrolled + .category-strip { top: 124px; height: 45px; padding-inline: 14px; gap: 22px; }
   .category-strip button { min-height: 44px; }
   .search-suggestions { position: fixed; top: 122px; right: 10px; left: 10px; max-height: min(520px, calc(100vh - 140px)); }
+  .mobile-bottom-nav { position: fixed; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); left: 8px; z-index: 110; min-height: 64px; display: grid; grid-template-columns: repeat(5,1fr); align-items: center; border: 1px solid rgba(218,224,234,.82); border-radius: 22px; padding: 5px 6px; background: rgba(255,255,255,.92); box-shadow: 0 18px 48px rgba(23,33,58,.18); backdrop-filter: saturate(180%) blur(22px); -webkit-backdrop-filter: saturate(180%) blur(22px); animation: mobile-nav-arrive 420ms var(--ease-premium) both; }
+  .mobile-bottom-nav button { position: relative; min-width: 0; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; border-radius: 16px; background: transparent; color: #65718a; cursor: pointer; transition: color 180ms ease, background 180ms ease, transform 180ms var(--ease-premium); }
+  .mobile-bottom-nav button:active { transform: scale(.92); }
+  .mobile-bottom-nav button.active { color: var(--blue); background: #edf3ff; }
+  .mobile-bottom-nav svg { width: 20px; height: 20px; stroke-width: 1.8; }
+  .mobile-bottom-nav span { font-size: 9px; font-weight: 650; }
+  .mobile-bottom-nav b { position: absolute; top: 1px; right: calc(50% - 21px); min-width: 17px; height: 17px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 999px; background: var(--blue); color: #fff; font-size: 8px; animation: polish-badge .28s var(--ease-premium); }
+  .site-shell { padding-bottom: 82px; }
+  .nexora-guide-launcher { bottom: 84px; }
+  .nexora-guide { bottom: 144px; max-height: calc(100vh - 162px); }
 }
 @media (max-width: 470px) {
   .topbar { padding-inline: 10px; }
@@ -92,5 +131,15 @@
   .cart-action b, .compare-action b { right: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .voice-search.listening, .search-loader { animation: none; }
+  .voice-search.listening, .search-loader, .brand-mark, .mobile-bottom-nav { animation: none; }
 }
+@keyframes mobile-nav-arrive { from { opacity: 0; transform: translateY(18px) scale(.97); } }
+
+.site-shell.dark .topbar,
+.site-shell.dark .mobile-bottom-nav,
+.site-shell.dark .category-strip { border-color: rgba(73,87,111,.72); background: rgba(12,19,34,.9); }
+.site-shell.dark .mobile-theme-toggle:hover,
+.site-shell.dark .mobile-theme-toggle:focus-visible,
+.site-shell.dark .mobile-bottom-nav button.active { background: #182a49; }
+.site-shell.dark .mobile-bottom-nav button { color: #a9b3c7; }
+.site-shell.dark .mobile-bottom-nav button.active { color: #8fb3ff; }

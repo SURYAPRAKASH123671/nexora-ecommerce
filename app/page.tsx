@@ -8,6 +8,7 @@ import {
   ScanSearch,
   LoaderCircle,
   Headphones,
+  House,
   Paperclip,
   Mic,
   Moon,
@@ -1059,10 +1060,19 @@ export default function Home({
           onClick={() => navigate("home")}
           aria-label="Nexora home"
         >
-          <span className="brand-mark" aria-hidden="true">
-            N
+          <span className="brand-mark brand-mark-animated" aria-hidden="true">
+            <span>N</span>
+            <i />
           </span>
-          <span>Nexora</span>
+          <span className="brand-word">Nexora</span>
+        </button>
+        <button
+          className="mobile-theme-toggle"
+          onClick={() => setDarkMode((current) => !current)}
+          aria-label={darkMode ? "Use light theme" : "Use dark theme"}
+          aria-pressed={darkMode}
+        >
+          {darkMode ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
         </button>
         <form
           className={`search${searchOpen ? " search-open" : ""}`}
@@ -1238,7 +1248,21 @@ export default function Home({
             </div>
           )}
         </form>
-        <nav className="header-actions" aria-label="Primary navigation">
+        <nav
+          className="header-actions"
+          aria-label="Primary navigation"
+          data-active={
+            view === "catalog"
+              ? "catalog"
+              : view === "account"
+                ? "account"
+                : view === "compare"
+                  ? "compare"
+                  : view === "cart"
+                    ? "cart"
+                    : "none"
+          }
+        >
           <button
             className={darkMode ? "active" : ""}
             onClick={() => setDarkMode((current) => !current)}
@@ -1313,6 +1337,51 @@ export default function Home({
         ))}
         <span className="strip-spacer" />
         <button onClick={() => navigate("admin")}>Admin preview</button>
+      </nav>
+
+      <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+        <button
+          className={view === "home" ? "active" : ""}
+          onClick={() => navigate("home")}
+          aria-current={view === "home" ? "page" : undefined}
+        >
+          <House aria-hidden="true" />
+          <span>Home</span>
+        </button>
+        <button
+          className={view === "catalog" ? "active" : ""}
+          onClick={() => navigate("catalog")}
+          aria-current={view === "catalog" ? "page" : undefined}
+        >
+          <Store aria-hidden="true" />
+          <span>Shop</span>
+        </button>
+        <button
+          className={view === "account" ? "active" : ""}
+          onClick={() => navigate("account")}
+          aria-current={view === "account" ? "page" : undefined}
+        >
+          <UserRound aria-hidden="true" />
+          <span>Account</span>
+        </button>
+        <button
+          className={view === "compare" ? "active" : ""}
+          onClick={() => navigate("compare")}
+          aria-current={view === "compare" ? "page" : undefined}
+        >
+          <Columns3 aria-hidden="true" />
+          <span>Compare</span>
+          {comparisonIds.length > 0 && <b>{comparisonIds.length}</b>}
+        </button>
+        <button
+          className={view === "cart" ? "active" : ""}
+          onClick={() => navigate("cart")}
+          aria-current={view === "cart" ? "page" : undefined}
+        >
+          <ShoppingBag aria-hidden="true" />
+          <span>Bag</span>
+          {cartCount > 0 && <b key={cartCount}>{cartCount}</b>}
+        </button>
       </nav>
 
       {notice && (

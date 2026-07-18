@@ -426,6 +426,10 @@ test("premium header supports accessible search, navigation and responsive inter
   assert.match(styles, /prefers-reduced-motion/);
   assert.match(styles, /@media \(max-width: 470px\)/);
   assert.match(styles, /category-strip.*position: sticky/s);
+  assert.match(page, /mobile-bottom-nav/);
+  assert.match(page, /brand-mark-animated/);
+  assert.match(styles, /nexora-logo-arrive/);
+  assert.match(styles, /header-actions\[data-active/);
 });
 
 test("Nexora design system and product finder remain original, explainable and factual", async () => {
