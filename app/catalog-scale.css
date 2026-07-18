@@ -1,0 +1,6 @@
+.catalog-load-more {
+  grid-column: 1 / -1;
+  width: min(320px, 100%);
+  justify-self: center;
+  margin: 24px auto 8px;
+}

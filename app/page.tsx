@@ -21,6 +21,16 @@ type View =
   | "admin"
   | "information";
 type SortMode = "recommended" | "price-low" | "price-high" | "rating";
+type CatalogResponse = {
+  items: Product[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+};
 
 type CartLine = {
   key: string;
@@ -138,6 +148,9 @@ export default function Home() {
   const [recentlyViewed, setRecentlyViewed] = useState<number[]>([]);
   const [comparisonIds, setComparisonIds] = useState<number[]>([]);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [catalogTotal, setCatalogTotal] = useState(fallbackProducts.length);
+  const [catalogHasMore, setCatalogHasMore] = useState(false);
 
   useEffect(() => {
     const pages: InfoPage[] = [
@@ -242,21 +255,65 @@ export default function Home() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/site/catalog?media=v2", { signal: controller.signal })
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams({ page: "1", pageSize: "48" });
+      if (query.trim()) params.set("q", query.trim());
+      if (category !== "All") params.set("category", category);
+      if (sortMode !== "recommended") params.set("sort", sortMode);
+      setLoading(true);
+      fetch(`/api/site/catalog?${params}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Catalog unavailable");
         return response.json();
       })
-      .then((data: Product[]) => {
-        if (!Array.isArray(data) || data.length === 0) return;
-        setProducts(data);
-        setSelected(data[0]);
+      .then((data: CatalogResponse) => {
+        if (!Array.isArray(data.items)) return;
+        setProducts(data.items);
+        if (data.items[0]) setSelected(data.items[0]);
+        setCatalogPage(1);
+        setCatalogTotal(data.pagination.total);
+        setCatalogHasMore(data.pagination.hasMore);
         setUsingDemoCatalog(false);
       })
       .catch(() => undefined)
       .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, []);
+    }, 220);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, category, sortMode]);
+
+  async function loadMoreProducts() {
+    if (loading || !catalogHasMore) return;
+    setLoading(true);
+    try {
+      const nextPage = catalogPage + 1;
+      const params = new URLSearchParams({
+        page: String(nextPage),
+        pageSize: "48",
+      });
+      if (query.trim()) params.set("q", query.trim());
+      if (category !== "All") params.set("category", category);
+      if (sortMode !== "recommended") params.set("sort", sortMode);
+      const response = await fetch(`/api/site/catalog?${params}`);
+      if (!response.ok) throw new Error("Catalog unavailable");
+      const data = (await response.json()) as CatalogResponse;
+      setProducts((current) => [
+        ...current,
+        ...data.items.filter(
+          (item) => !current.some((existing) => existing.id === item.id),
+        ),
+      ]);
+      setCatalogPage(nextPage);
+      setCatalogTotal(data.pagination.total);
+      setCatalogHasMore(data.pagination.hasMore);
+    } catch {
+      showNotice("More products could not be loaded");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -822,7 +879,10 @@ export default function Home() {
                       ? "Shop everything"
                       : category}
                 </h1>
-                <p>{filtered.length} thoughtfully selected products</p>
+                <p>
+                  Showing {filtered.length.toLocaleString("en-IN")} of{" "}
+                  {catalogTotal.toLocaleString("en-IN")} products
+                </p>
               </div>
               <button className="filter-button" onClick={cycleSort}>
                 Sort: {sortLabels[sortMode]} ⌄
@@ -869,6 +929,15 @@ export default function Home() {
                     onCompare={toggleComparison}
                   />
                 ))}
+                {catalogHasMore && (
+                  <button
+                    className="primary catalog-load-more"
+                    onClick={loadMoreProducts}
+                    disabled={loading}
+                  >
+                    {loading ? "Loading more products…" : "Load more products"}
+                  </button>
+                )}
               </div>
             ) : (
               <EmptyState

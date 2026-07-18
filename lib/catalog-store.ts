@@ -165,11 +165,23 @@ export async function ensureCatalogSeeded(DB: D1Database): Promise<void> {
 export type CatalogRow = {
   id: number;
   name: string;
+  brand: string;
   official_description: string;
   price_paise: number;
   previous_price_paise: number | null;
   stock_quantity: number;
   image_url: string;
   category_name: string;
+  subcategory_name: string;
   verification_status: string;
+  rating_tenths: number;
+  review_count: number;
+  colour: string | null;
+  size: string | null;
+  discount_percent: number;
+  new_arrival: number;
+  best_seller: number;
+  warranty_text: string;
+  shipping_text: string;
+  return_policy_text: string;
 };

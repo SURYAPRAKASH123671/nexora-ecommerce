@@ -179,7 +179,7 @@ test("catalog persistence covers normalized ecommerce product records", async ()
   }
 });
 
-test("catalog API upgrades persisted WebP paths and bypasses stale media cache", async () => {
+test("catalog API upgrades media paths and provides indexed server pagination", async () => {
   const page = await readFile(
     new URL("../app/page.tsx", import.meta.url),
     "utf8",
@@ -193,9 +193,11 @@ test("catalog API upgrades persisted WebP paths and bypasses stale media cache",
     "utf8",
   );
 
-  assert.match(page, /\/api\/site\/catalog\?media=v2/);
+  assert.match(page, /pageSize: "48"/);
+  assert.match(page, /loadMoreProducts/);
   assert.match(route, /imageUrl: row\.image_url\.replace/);
-  assert.match(route, /"Cache-Control": "no-store"/);
+  assert.match(route, /s-maxage=120/);
+  assert.match(route, /LIMIT \? OFFSET \?/);
   assert.match(migration, /UPDATE `catalog_products`/);
   assert.match(migration, /UPDATE `product_variants`/);
   assert.match(migration, /UPDATE `product_media`/);
