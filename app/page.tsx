@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
+  ArrowRight,
   Columns3,
+  ScanSearch,
   LoaderCircle,
   Mic,
   Moon,
   Search,
+  Sparkles,
   ShoppingBag,
   Store,
   Sun,
@@ -196,6 +199,11 @@ export default function Home({
   const [searchActiveIndex, setSearchActiveIndex] = useState(-1);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [voiceListening, setVoiceListening] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideQuestion, setGuideQuestion] = useState("");
+  const [guideAnswer, setGuideAnswer] = useState("Tell me what you need and I’ll rank matching catalogue products using transparent price, rating and shopping signals.");
+  const [visualPreview, setVisualPreview] = useState("");
+  const visualSearchInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const pages: InfoPage[] = [
@@ -338,6 +346,8 @@ export default function Home({
     if ("serviceWorker" in navigator)
       navigator.serviceWorker.register("/sw.js").catch(() => undefined);
   }, []);
+
+  useEffect(() => () => { if (visualPreview) URL.revokeObjectURL(visualPreview); }, [visualPreview]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -654,6 +664,40 @@ export default function Home({
     setVoiceListening(true); recognition.start();
   }
 
+  function askGuide(event: React.FormEvent) {
+    event.preventDefault();
+    const intent = guideQuestion.trim().toLowerCase();
+    if (!intent) return;
+    const aliases: Record<string, string[]> = {
+      Phones: ["phone", "mobile", "smartphone"], Audio: ["audio", "headphone", "earbud", "speaker"],
+      Computing: ["laptop", "computer", "computing"], Grocery: ["grocery", "food", "snack", "drink"],
+      Wearables: ["watch", "wearable"], Cameras: ["camera", "photography"], Gaming: ["gaming", "game"],
+      Kitchen: ["kitchen", "cooking"], "Home Appliances": ["appliance", "home"], "Personal Care": ["personal care", "grooming"],
+    };
+    const requestedCategory = Object.entries(aliases).find(([, words]) => words.some((word) => intent.includes(word)))?.[0];
+    const budgetMatch = intent.match(/(?:under|below|less than)\s*(?:₹|rs\.?\s*)?([\d,]+)/i);
+    const budget = budgetMatch ? Number(budgetMatch[1].replaceAll(",", "")) : null;
+    const candidates = products
+      .filter((product) => !requestedCategory || product.categoryName === requestedCategory)
+      .filter((product) => !budget || product.price <= budget)
+      .sort((a, b) => b.rating - a.rating || b.reviews - a.reviews)
+      .slice(0, 3);
+    if (!candidates.length) {
+      setGuideAnswer("I couldn’t find a catalogue match for those exact constraints. Try a broader category or a higher budget; I won’t invent unavailable products.");
+      return;
+    }
+    const constraint = [requestedCategory, budget ? `under ${money.format(budget)}` : ""].filter(Boolean).join(" ");
+    setGuideAnswer(`${constraint ? `For ${constraint}, ` : "Based on current catalogue signals, "}${candidates.map((item) => `${item.name} (${money.format(item.price)}, ${item.rating.toFixed(1)}★)`).join("; ")}. Rankings use recorded price and rating data, not generated claims.`);
+  }
+
+  function selectVisualSearch(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { showNotice("Choose an image file for visual discovery"); return; }
+    setVisualPreview((current) => { if (current) URL.revokeObjectURL(current); return URL.createObjectURL(file); });
+    setGuideAnswer("Image selected for visual discovery. Choose a category below to narrow the catalogue. Nexora does not claim an automated image match without a connected vision model.");
+    setGuideOpen(true);
+  }
+
   function cycleSort() {
     const next =
       sortModes[(sortModes.indexOf(sortMode) + 1) % sortModes.length];
@@ -701,6 +745,10 @@ export default function Home({
               <X aria-hidden="true" />
             </button>
           )}
+          <input ref={visualSearchInput} className="visual-search-input" type="file" accept="image/*" onChange={(event) => selectVisualSearch(event.target.files?.[0])} tabIndex={-1} aria-hidden="true" />
+          <button className="search-icon-button visual-search-button" type="button" onClick={() => visualSearchInput.current?.click()} aria-label="Search using a product image">
+            <ScanSearch aria-hidden="true" />
+          </button>
           <button className={`search-icon-button voice-search${voiceListening ? " listening" : ""}`} type="button" onClick={startVoiceSearch} aria-label={voiceListening ? "Listening for search" : "Search by voice"} aria-pressed={voiceListening}>
             <Mic aria-hidden="true" />
           </button>
@@ -1375,6 +1423,19 @@ export default function Home({
           />
         )}
       </main>
+
+      <button className="nexora-guide-launcher" onClick={() => setGuideOpen(true)} aria-label="Open Nexora shopping guide" aria-expanded={guideOpen}>
+        <Sparkles aria-hidden="true" /><span>Ask Nexora</span>
+      </button>
+      {guideOpen && <aside className="nexora-guide" role="dialog" aria-modal="false" aria-labelledby="nexora-guide-title">
+        <header><div><span><Sparkles aria-hidden="true" /></span><div><small>Explainable catalogue guidance</small><h2 id="nexora-guide-title">Nexora Guide</h2></div></div><button onClick={() => setGuideOpen(false)} aria-label="Close shopping guide"><X aria-hidden="true" /></button></header>
+        {visualPreview && <div className="guide-visual"><img src={visualPreview} alt="Uploaded product reference" /><button onClick={() => setVisualPreview("")}>Remove image</button></div>}
+        <div className="guide-answer" aria-live="polite"><Sparkles aria-hidden="true"/><p>{guideAnswer}</p></div>
+        <div className="guide-categories" aria-label="Product categories">{categories.slice(1, 7).map((item) => <button key={item} onClick={() => { setCategory(item); setGuideOpen(false); navigate("catalog"); }}>{item}</button>)}</div>
+        {recommendedProducts[0] && <button className="guide-recommendation" onClick={() => { setGuideOpen(false); openProduct(recommendedProducts[0]); }}><Image src={recommendedProducts[0].imageUrl} unoptimized alt="" width={54} height={54}/><span><small>From your shopping signals</small><b>{recommendedProducts[0].name}</b></span><ArrowRight aria-hidden="true"/></button>}
+        <form onSubmit={askGuide}><label htmlFor="guide-question" className="sr-only">Ask for product guidance</label><input id="guide-question" value={guideQuestion} onChange={(event) => setGuideQuestion(event.target.value)} placeholder="Try ‘phones under ₹50,000’"/><button type="submit" aria-label="Ask Nexora Guide"><ArrowRight aria-hidden="true"/></button></form>
+        <p className="guide-disclosure">Uses catalogue facts and your device-local shopping signals. It does not invent specifications or availability.</p>
+      </aside>}
 
       <ProfessionalFooter
         onView={navigate}

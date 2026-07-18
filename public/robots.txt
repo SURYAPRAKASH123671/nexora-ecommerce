@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /account
 Disallow: /checkout
-Sitemap: https://nexora-web-virid.vercel.app/sitemap.xml
+Sitemap: https://nexora-commerce-surya.kssuryaprakash2.chatgpt.site/sitemap.xml

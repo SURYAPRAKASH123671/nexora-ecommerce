@@ -4,7 +4,7 @@ import Home from "../../page";
 import { fallbackProducts, productSlug } from "../../catalog";
 import groceryManifest from "../../../premium-grocery-source.json";
 
-const canonicalBase = "https://nexora-web-virid.vercel.app";
+const canonicalBase = "https://nexora-commerce-surya.kssuryaprakash2.chatgpt.site";
 
 export function generateStaticParams() {
   return [

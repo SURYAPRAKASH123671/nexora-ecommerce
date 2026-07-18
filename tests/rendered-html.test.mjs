@@ -427,3 +427,17 @@ test("premium header supports accessible search, navigation and responsive inter
   assert.match(styles, /@media \(max-width: 470px\)/);
   assert.match(styles, /category-strip.*position: sticky/s);
 });
+
+test("Nexora design system and shopping guide remain original, explainable and factual", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/material-system.css", import.meta.url), "utf8");
+  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
+  assert.match(styles, /--md-primary/);
+  assert.match(styles, /--md-surface-container/);
+  assert.match(styles, /nexora-guide/);
+  assert.match(page, /Nexora Guide/);
+  assert.match(page, /Rankings use recorded price and rating data, not generated claims/);
+  assert.match(page, /does not invent specifications or availability/);
+  assert.match(page, /visual discovery/);
+  assert.match(layout, /nexora-commerce-surya\.kssuryaprakash2\.chatgpt\.site/);
+});
