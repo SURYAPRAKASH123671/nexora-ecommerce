@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /account
+Disallow: /checkout
+Sitemap: https://nexora-web-virid.vercel.app/sitemap.xml

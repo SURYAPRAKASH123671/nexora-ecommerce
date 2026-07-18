@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "market": "IN",
+  "currency": "INR",
+  "lastReviewed": "2026-07-18",
+  "publicationRule": "A phone may be published only after its India availability, primary specifications, configuration prices and official media have source URLs.",
+  "requiredFields": [
+    "officialName",
+    "brand",
+    "indiaAvailabilitySource",
+    "officialSpecificationSource",
+    "officialMediaSource",
+    "display",
+    "processor",
+    "memoryOptions",
+    "storageOptions",
+    "cameras",
+    "battery",
+    "charging",
+    "dimensions",
+    "weight",
+    "software",
+    "connectivity",
+    "warranty",
+    "countryOfOrigin",
+    "manufacturer"
+  ],
+  "verifiedCollectionSources": [
+    { "brand": "Apple", "url": "https://www.apple.com/in/iphone/" },
+    { "brand": "Samsung", "url": "https://www.samsung.com/in/smartphones/" },
+    { "brand": "OnePlus", "url": "https://www.oneplus.in/phone" },
+    { "brand": "Google Pixel", "url": "https://store.google.com/in/category/phones?hl=en-IN" }
+  ],
+  "qualityControls": [
+    "No inferred specifications",
+    "No copied customer ratings without provenance",
+    "No offer badge without an active configured offer",
+    "No image without confirmed reuse rights",
+    "Every price is timestamped and market-specific",
+    "Unavailable fields remain unpublished rather than fabricated"
+  ]
+}
