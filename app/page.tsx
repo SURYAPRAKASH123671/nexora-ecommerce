@@ -1497,7 +1497,7 @@ export default function Home({
                   <br />
                   <span>every day.</span>
                 </h1>
-                <p>
+                <p key={currentHero.id} className="hero-product-copy">
                   {currentHero.name}. {currentHero.description}
                 </p>
                 <div className="hero-actions">
@@ -1530,16 +1530,19 @@ export default function Home({
                 className="hero-visual"
                 aria-label="Featured Nexora products"
               >
-                <Image
-                  key={currentHero.id}
-                  className="hero-product-render"
-                  src={currentHero.imageUrl}
-                  unoptimized
-                  alt={currentHero.name}
-                  width={1100}
-                  height={1100}
-                  priority
-                />
+                {heroProducts.map((product, index) => (
+                  <Image
+                    key={product.id}
+                    className={`hero-product-render${heroIndex % heroProducts.length === index ? " active" : ""}`}
+                    src={product.imageUrl}
+                    unoptimized
+                    alt={product.name}
+                    aria-hidden={heroIndex % heroProducts.length !== index}
+                    width={1100}
+                    height={1100}
+                    priority={index === 0}
+                  />
+                ))}
                 <div className="hero-gallery-controls">
                   <span>{(heroIndex % heroProducts.length) + 1} / {heroProducts.length}</span>
                   <button onClick={() => setHeroIndex((heroIndex + heroProducts.length - 1) % heroProducts.length)} aria-label="Previous featured electronics product">←</button>
