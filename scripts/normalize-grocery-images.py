@@ -13,7 +13,10 @@ output.mkdir(parents=True, exist_ok=True)
 for item in manifest["records"]:
     request = urllib.request.Request(item["imageSource"], headers={"User-Agent": "NexoraCommerce/1.0"})
     with urllib.request.urlopen(request, timeout=30) as response:
-        original = Image.open(io.BytesIO(response.read(8_000_000))).convert("RGB")
+        source = Image.open(io.BytesIO(response.read(8_000_000)))
+        rgba = source.convert("RGBA")
+        white = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+        original = Image.alpha_composite(white, rgba).convert("RGB")
     clean = ImageOps.contain(original, (1000, 1000), Image.Resampling.LANCZOS)
     clean = ImageEnhance.Sharpness(clean).enhance(1.08)
     pixels = clean.load()

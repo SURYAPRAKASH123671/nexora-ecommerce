@@ -843,6 +843,22 @@ export default function Home({
               onAll={() => navigate("catalog")}
             />
 
+            {products.some((product) => product.categoryName === "Grocery") && (
+              <GroceryMarketplace
+                products={products.filter((product) => product.categoryName === "Grocery")}
+                onOpen={openProduct}
+                onAdd={addToCart}
+                wishlist={wishlist}
+                onWishlist={toggleWishlist}
+                comparisonIds={comparisonIds}
+                onCompare={toggleComparison}
+                onAll={() => {
+                  setCategory("Grocery");
+                  navigate("catalog");
+                }}
+              />
+            )}
+
             <section className="collection-grid wrap">
               <article className="collection-card collection-blue">
                 <div>
@@ -1961,6 +1977,71 @@ function ProductSection({
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+function GroceryMarketplace({
+  products,
+  onOpen,
+  onAdd,
+  wishlist,
+  onWishlist,
+  comparisonIds,
+  onCompare,
+  onAll,
+}: {
+  products: Product[];
+  onOpen: (product: Product) => void;
+  onAdd: (product: Product) => void;
+  wishlist: number[];
+  onWishlist: (id: number) => void;
+  comparisonIds: number[];
+  onCompare: (id: number) => void;
+  onAll: () => void;
+}) {
+  const tabs = [
+    "Trending today",
+    "Today's deals",
+    "New arrivals",
+    "Best sellers",
+    "Daily essentials",
+    "Popular brands",
+    "Recommended for you",
+    "Continue shopping",
+    "Frequently bought together",
+    "Customers also bought",
+    "Top rated products",
+  ];
+  const [activeTab, setActiveTab] = useState(tabs[0]);
+  const ranked = useMemo(() => {
+    const copy = [...products];
+    if (activeTab === "Today's deals") return copy.sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0));
+    if (activeTab === "New arrivals") return copy.sort((a, b) => Number(Boolean(b.newArrival)) - Number(Boolean(a.newArrival)) || b.id - a.id);
+    if (activeTab === "Best sellers") return copy.sort((a, b) => Number(Boolean(b.bestSeller)) - Number(Boolean(a.bestSeller)) || b.reviews - a.reviews);
+    if (activeTab === "Top rated products") return copy.sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
+    if (activeTab === "Popular brands") return copy.sort((a, b) => (a.brand ?? "").localeCompare(b.brand ?? ""));
+    return copy.sort((a, b) => b.reviews - a.reviews || b.rating - a.rating);
+  }, [activeTab, products]);
+  const brands = Array.from(new Set(products.map((product) => product.brand).filter(Boolean))).slice(0, 10);
+
+  return (
+    <section className="grocery-marketplace wrap" aria-labelledby="grocery-marketplace-title">
+      <div className="section-title">
+        <div><span className="eyebrow">Nexora Grocery</span><h2 id="grocery-marketplace-title">Fresh picks for every day</h2><p>Pantry, beverages, snacks, personal care and home essentials in one curated destination</p></div>
+        <button onClick={onAll}>Shop all grocery <span aria-hidden="true">→</span></button>
+      </div>
+      <div className="grocery-discovery-tabs" role="tablist" aria-label="Grocery collections">
+        {tabs.map((tab) => <button key={tab} role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? "active" : ""} onClick={() => setActiveTab(tab)}>{tab}</button>)}
+      </div>
+      <div className="grocery-brand-strip" aria-label="Popular grocery brands">
+        {brands.map((brand) => <button key={brand} onClick={() => setActiveTab("Popular brands")}>{brand}</button>)}
+      </div>
+      <div className="product-grid grocery-marketplace-grid">
+        {ranked.slice(0, 4).map((product) => (
+          <ProductCard key={`${activeTab}-${product.id}`} product={product} onOpen={onOpen} onAdd={onAdd} liked={wishlist.includes(product.id)} onWishlist={onWishlist} compared={comparisonIds.includes(product.id)} onCompare={onCompare} />
+        ))}
+      </div>
     </section>
   );
 }

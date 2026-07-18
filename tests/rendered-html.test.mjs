@@ -231,6 +231,7 @@ test("premium grocery catalogue uses unique factual records and 1200px local med
     "utf8",
   );
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const normalizer = await readFile(new URL("../scripts/normalize-grocery-images.py", import.meta.url), "utf8");
 
   assert.equal(manifest.records.length, 64);
   assert.equal(new Set(manifest.records.map((item) => item.sourceId)).size, 64);
@@ -241,6 +242,8 @@ test("premium grocery catalogue uses unique factual records and 1200px local med
   assert.doesNotMatch(migration, /'RETAILER_CATALOG_VERIFIED', [^,]+, [^,]+, '[^']+', [^,]+, [^,]+, [^,]+, [^,]+, [1-9]\d*,/);
   assert.match(page, /grocery-card/);
   assert.match(page, /Check availability/);
+  assert.match(normalizer, /convert\("RGBA"\)/);
+  assert.match(normalizer, /Image\.alpha_composite\(white, rgba\)/);
 
   for (const item of manifest.records) {
     const image = await readFile(
@@ -249,6 +252,24 @@ test("premium grocery catalogue uses unique factual records and 1200px local med
     const dimensions = jpegDimensions(image);
     assert.deepEqual(dimensions, { width: 1200, height: 1200 }, item.imagePath);
   }
+});
+
+test("grocery homepage provides enterprise merchandising collections", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  for (const section of [
+    "Trending today",
+    "Today's deals",
+    "New arrivals",
+    "Best sellers",
+    "Daily essentials",
+    "Popular brands",
+    "Recommended for you",
+    "Continue shopping",
+    "Frequently bought together",
+    "Customers also bought",
+    "Top rated products",
+  ]) assert.match(page, new RegExp(section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(page, /grocery-marketplace-grid/);
 });
 
 test("portfolio grocery inventory enables shopping without presenting supplier stock as live", async () => {
