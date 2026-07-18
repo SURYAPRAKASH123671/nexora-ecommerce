@@ -221,3 +221,20 @@ test("Open Prices migration contains unique factual India grocery listings", asy
   assert.match(migration, /'OPEN_DATA_VERIFIED'/);
   assert.doesNotMatch(migration, /'OPEN_DATA_VERIFIED', [1-9]\d*, [1-9]\d*/);
 });
+
+test("public crawler routes and sitemap expose dedicated product and policy pages", async () => {
+  const home = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const productRoute = await readFile(new URL("../app/products/[slug]/page.tsx", import.meta.url), "utf8");
+  const publicRoute = await readFile(new URL("../app/[route]/page.tsx", import.meta.url), "utf8");
+  const robots = await readFile(new URL("../public/robots.txt", import.meta.url), "utf8");
+  const sitemap = await readFile(new URL("../public/sitemap.xml", import.meta.url), "utf8");
+
+  assert.match(home, /\/products\/\$\{productSlug\(product\.name\)\}/);
+  assert.match(productRoute, /generateMetadata/);
+  assert.match(publicRoute, /initialView="information"/);
+  assert.match(robots, /Allow: \//);
+  assert.match(robots, /Disallow: \/admin/);
+  assert.match(sitemap, /\/products\/apple-iphone-16/);
+  assert.match(sitemap, /\/categories\/grocery/);
+  assert.equal((sitemap.match(/<url>/g) ?? []).length, 99);
+});

@@ -14,7 +14,7 @@ export type Product = {
 
 type ProductSeed = [name: string, description: string, price: number, previousPrice?: number, badge?: string];
 
-function productSlug(value: string) {
+export function productSlug(value: string) {
   return value.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 

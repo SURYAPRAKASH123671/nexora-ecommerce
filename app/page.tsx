@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { categories, fallbackProducts, type Product } from "./catalog";
+import { categories, fallbackProducts, productSlug, type Product } from "./catalog";
 import PremiumProductPage from "./PremiumProductPage";
 import { getProductProfile, type ProductConfiguration } from "./product-details";
 import SupportPage, {
@@ -125,14 +125,29 @@ const sortLabels: Record<SortMode, string> = {
   rating: "Customer rating",
 };
 
-export default function Home() {
-  const [view, setView] = useState<View>("home");
+export type StorefrontInitialProps = {
+  initialView?: View;
+  initialProductSlug?: string;
+  initialCategory?: string;
+  initialInfoPage?: InfoPage;
+};
+
+export default function Home({
+  initialView = "home",
+  initialProductSlug,
+  initialCategory = "All",
+  initialInfoPage = "help-centre",
+}: StorefrontInitialProps = {}) {
+  const initialProduct =
+    fallbackProducts.find((product) => productSlug(product.name) === initialProductSlug) ??
+    fallbackProducts[0];
+  const [view, setView] = useState<View>(initialView);
   const [products, setProducts] = useState<Product[]>(fallbackProducts);
   const [loading, setLoading] = useState(true);
   const [usingDemoCatalog, setUsingDemoCatalog] = useState(true);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("All");
-  const [selected, setSelected] = useState<Product>(fallbackProducts[0]);
+  const [category, setCategory] = useState(initialCategory);
+  const [selected, setSelected] = useState<Product>(initialProduct);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [wishlist, setWishlist] = useState<number[]>([]);
   const [notice, setNotice] = useState("");
@@ -141,7 +156,7 @@ export default function Home() {
   );
   const [sortMode, setSortMode] = useState<SortMode>("recommended");
   const [auth, setAuth] = useState<AuthSession | null>(null);
-  const [infoPage, setInfoPage] = useState<InfoPage>("help-centre");
+  const [infoPage, setInfoPage] = useState<InfoPage>(initialInfoPage);
   const [heroIndex, setHeroIndex] = useState(0);
   const [darkMode, setDarkMode] = useState(false);
   const [preferencesReady, setPreferencesReady] = useState(false);
@@ -162,11 +177,43 @@ export default function Home() {
       "terms-conditions",
     ];
     const syncFromUrl = () => {
-      const requested = new URL(window.location.href).searchParams.get("page");
+      const url = new URL(window.location.href);
+      const path = url.pathname.replace(/^\/+|\/+$/g, "");
+      const requested = url.searchParams.get("page") ?? path;
       if (requested && pages.includes(requested as InfoPage)) {
         setInfoPage(requested as InfoPage);
         setView("information");
-      } else if (window.location.search.includes("page=")) {
+        return;
+      }
+      if (path.startsWith("products/")) {
+        const slug = path.slice("products/".length);
+        const product = fallbackProducts.find((item) => productSlug(item.name) === slug);
+        if (product) {
+          setSelected(product);
+          setView("product");
+          return;
+        }
+      }
+      if (path.startsWith("categories/")) {
+        const slug = path.slice("categories/".length);
+        const matched = categories.find((item) => productSlug(item) === slug);
+        if (matched) {
+          setCategory(matched);
+          setView("catalog");
+          return;
+        }
+      }
+      const routeViews: Record<string, View> = {
+        shop: "catalog",
+        cart: "cart",
+        checkout: "checkout",
+        compare: "compare",
+        account: "account",
+        admin: "admin",
+      };
+      if (routeViews[path]) setView(routeViews[path]);
+      else if (!path) setView("home");
+      else if (url.search.includes("page=")) {
         setView("home");
       }
     };
@@ -397,15 +444,23 @@ export default function Home() {
 
   function navigate(next: View) {
     setView(next);
-    if (next !== "information" && window.location.search.includes("page="))
-      window.history.pushState({}, "", window.location.pathname);
+    const route: Partial<Record<View, string>> = {
+      home: "/",
+      catalog: "/shop",
+      cart: "/cart",
+      checkout: "/checkout",
+      compare: "/compare",
+      account: "/account",
+      admin: "/admin",
+    };
+    if (route[next]) window.history.pushState({}, "", route[next]);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function navigateInfo(page: InfoPage) {
     setInfoPage(page);
     setView("information");
-    window.history.pushState({}, "", `/?page=${page}`);
+    window.history.pushState({}, "", `/${page}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -415,7 +470,9 @@ export default function Home() {
       product.id,
       ...current.filter((id) => id !== product.id),
     ].slice(0, 12));
-    navigate("product");
+    setView("product");
+    window.history.pushState({}, "", `/products/${productSlug(product.name)}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function showNotice(message: string) {
