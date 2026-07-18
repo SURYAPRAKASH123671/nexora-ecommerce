@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { categories, fallbackProducts, type Product } from "./catalog";
 import PremiumProductPage from "./PremiumProductPage";
-import type { ProductConfiguration } from "./product-details";
+import { getProductProfile, type ProductConfiguration } from "./product-details";
 import SupportPage, {
   ProfessionalFooter,
   type InfoPage,
@@ -16,6 +16,7 @@ type View =
   | "product"
   | "cart"
   | "checkout"
+  | "compare"
   | "account"
   | "admin"
   | "information";
@@ -112,6 +113,7 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
   const [preferencesReady, setPreferencesReady] = useState(false);
   const [recentlyViewed, setRecentlyViewed] = useState<number[]>([]);
+  const [comparisonIds, setComparisonIds] = useState<number[]>([]);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   useEffect(() => {
@@ -169,14 +171,19 @@ export default function Home() {
       const savedRecent = JSON.parse(
         localStorage.getItem("nexora-recent") ?? "[]",
       );
+      const savedComparison = JSON.parse(
+        localStorage.getItem("nexora-comparison") ?? "[]",
+      );
       if (Array.isArray(savedCart)) setCart(savedCart);
       if (Array.isArray(savedWishlist)) setWishlist(savedWishlist);
       if (Array.isArray(savedRecent)) setRecentlyViewed(savedRecent);
+      if (Array.isArray(savedComparison)) setComparisonIds(savedComparison.slice(0, 4));
       setDarkMode(localStorage.getItem("nexora-theme") === "dark");
     } catch {
       localStorage.removeItem("nexora-cart");
       localStorage.removeItem("nexora-wishlist");
       localStorage.removeItem("nexora-recent");
+      localStorage.removeItem("nexora-comparison");
     } finally {
       setPreferencesReady(true);
     }
@@ -187,9 +194,10 @@ export default function Home() {
     localStorage.setItem("nexora-cart", JSON.stringify(cart));
     localStorage.setItem("nexora-wishlist", JSON.stringify(wishlist));
     localStorage.setItem("nexora-recent", JSON.stringify(recentlyViewed));
+    localStorage.setItem("nexora-comparison", JSON.stringify(comparisonIds));
     localStorage.setItem("nexora-theme", darkMode ? "dark" : "light");
     document.documentElement.dataset.theme = darkMode ? "dark" : "light";
-  }, [cart, wishlist, recentlyViewed, darkMode, preferencesReady]);
+  }, [cart, wishlist, recentlyViewed, comparisonIds, darkMode, preferencesReady]);
 
   useEffect(() => {
     const timer = window.setInterval(
@@ -288,6 +296,24 @@ export default function Home() {
         )
         .slice(0, 5)
     : [];
+  const recommendedProducts = useMemo(() => {
+    const signals = new Map<string, number>();
+    const addSignal = (product: Product | undefined, weight: number) => {
+      if (!product) return;
+      signals.set(product.categoryName, (signals.get(product.categoryName) ?? 0) + weight);
+    };
+    recentlyViewed.forEach((id) => addSignal(products.find((item) => item.id === id), 4));
+    wishlist.forEach((id) => addSignal(products.find((item) => item.id === id), 3));
+    cart.forEach((line) => addSignal(line.product, 5 * line.quantity));
+    const excluded = new Set([...recentlyViewed.slice(0, 2), ...cart.map((line) => line.product.id)]);
+    return [...products]
+      .filter((product) => !excluded.has(product.id))
+      .sort((a, b) =>
+        (signals.get(b.categoryName) ?? 0) - (signals.get(a.categoryName) ?? 0) ||
+        b.rating - a.rating || b.reviews - a.reviews,
+      )
+      .slice(0, 4);
+  }, [products, recentlyViewed, wishlist, cart]);
 
   function navigate(next: View) {
     setView(next);
@@ -365,6 +391,21 @@ export default function Home() {
         ? current.filter((id) => id !== productId)
         : [...current, productId],
     );
+  }
+
+  function toggleComparison(productId: number) {
+    setComparisonIds((current) => {
+      if (current.includes(productId)) {
+        showNotice("Product removed from comparison");
+        return current.filter((id) => id !== productId);
+      }
+      if (current.length >= 4) {
+        showNotice("You can compare up to four products");
+        return current;
+      }
+      showNotice("Product added to comparison");
+      return [...current, productId];
+    });
   }
 
   function submitSearch(event: React.FormEvent) {
@@ -448,6 +489,11 @@ export default function Home() {
           <button onClick={() => navigate("account")}>
             <span aria-hidden="true">◯</span>
             <span>Account</span>
+          </button>
+          <button className="compare-action" onClick={() => navigate("compare")}>
+            <span aria-hidden="true">⇄</span>
+            <span>Compare</span>
+            {comparisonIds.length > 0 && <b>{comparisonIds.length}</b>}
           </button>
           <button className="cart-action" onClick={() => navigate("cart")}>
             <span aria-hidden="true">◇</span>
@@ -641,6 +687,18 @@ export default function Home() {
               />
             )}
 
+            <ProductSection
+              title="Recommended for you"
+              subtitle="Ranked from your browsing, saved items and bag activity"
+              products={recommendedProducts}
+              onOpen={openProduct}
+              onAdd={addToCart}
+              wishlist={wishlist}
+              onWishlist={toggleWishlist}
+              loading={loading}
+              onAll={() => navigate("catalog")}
+            />
+
             <section className="collection-grid wrap">
               <article className="collection-card collection-blue">
                 <div>
@@ -784,6 +842,8 @@ export default function Home() {
                     onAdd={addToCart}
                     liked={wishlist.includes(product.id)}
                     onWishlist={toggleWishlist}
+                    compared={comparisonIds.includes(product.id)}
+                    onCompare={toggleComparison}
                   />
                 ))}
               </div>
@@ -830,6 +890,18 @@ export default function Home() {
               onAll={() => navigate("catalog")}
             />
           </>
+        )}
+
+        {view === "compare" && (
+          <ComparisonView
+            products={comparisonIds
+              .map((id) => products.find((product) => product.id === id))
+              .filter((product): product is Product => Boolean(product))}
+            onRemove={toggleComparison}
+            onShop={() => navigate("catalog")}
+            onOpen={openProduct}
+            onAdd={addToCart}
+          />
         )}
 
         {view === "cart" && (
@@ -1567,12 +1639,16 @@ function ProductCard({
   onAdd,
   liked,
   onWishlist,
+  compared = false,
+  onCompare,
 }: {
   product: Product;
   onOpen: (product: Product) => void;
   onAdd: (product: Product) => void;
   liked: boolean;
   onWishlist: (id: number) => void;
+  compared?: boolean;
+  onCompare?: (id: number) => void;
 }) {
   return (
     <article className="product-card">
@@ -1603,7 +1679,18 @@ function ProductCard({
         />
       </div>
       <div className="product-meta">
-        <small>{product.categoryName}</small>
+        <div className="product-card-tools">
+          <small>{product.categoryName}</small>
+          {onCompare && (
+            <button
+              className={compared ? "active" : ""}
+              onClick={() => onCompare(product.id)}
+              aria-pressed={compared}
+            >
+              {compared ? "✓ Comparing" : "+ Compare"}
+            </button>
+          )}
+        </div>
         <button className="product-name" onClick={() => onOpen(product)}>
           {product.name}
         </button>
@@ -1635,6 +1722,91 @@ function ProductCard({
       </div>
     </article>
   );
+}
+
+function ComparisonView({
+  products,
+  onRemove,
+  onShop,
+  onOpen,
+  onAdd,
+}: {
+  products: Product[];
+  onRemove: (id: number) => void;
+  onShop: () => void;
+  onOpen: (product: Product) => void;
+  onAdd: (product: Product) => void;
+}) {
+  const rows = useMemo(() => {
+    const core = [
+      { label: "Brand", values: products.map((product) => getProductProfile(product.id)?.brand ?? product.name.split(" ")[0]) },
+      { label: "Price", values: products.map((product) => money.format(product.price)) },
+      { label: "Rating", values: products.map((product) => product.reviews > 0 ? `${product.rating} ★ (${product.reviews})` : "New listing") },
+      { label: "Features", values: products.map((product) => getProductProfile(product.id)?.highlights.slice(0, 3).join(" · ") ?? product.description) },
+      { label: "Dimensions", values: products.map((product) => findSpecification(product, "Dimensions")) },
+      { label: "Warranty", values: products.map((product) => getProductProfile(product.id)?.warranty ?? "Manufacturer warranty details pending verification") },
+      { label: "Availability", values: products.map((product) => product.stockQuantity > 0 ? `In stock · ${product.stockQuantity} units` : "Out of stock") },
+    ];
+    const specificationLabels = Array.from(new Set(products.flatMap((product) =>
+      (getProductProfile(product.id)?.specifications ?? []).flatMap((group) => group.items.map((item) => item.label)),
+    ))).slice(0, 8);
+    return [...core, ...specificationLabels.map((label) => ({
+      label,
+      values: products.map((product) => findSpecification(product, label)),
+    }))];
+  }, [products]);
+
+  if (products.length === 0)
+    return (
+      <section className="comparison-page wrap page-enter">
+        <EmptyState
+          title="Choose products to compare"
+          body="Add up to four products from the catalogue to see their important differences side by side."
+          action="Browse products"
+          onAction={onShop}
+        />
+      </section>
+    );
+
+  return (
+    <section className="comparison-page wrap page-enter">
+      <div className="page-heading">
+        <div><span className="eyebrow">Decision workspace</span><h1>Compare products</h1><p>{products.length} of 4 products selected</p></div>
+        <button className="filter-button" onClick={onShop}>Add another product</button>
+      </div>
+      <div className="comparison-scroll" tabIndex={0} aria-label="Product comparison table">
+        <div className="enterprise-comparison" style={{ "--comparison-count": products.length } as React.CSSProperties}>
+          <div className="comparison-label comparison-product-label">Product</div>
+          {products.map((product) => (
+            <article className="comparison-product" key={product.id}>
+              <button className="comparison-remove" onClick={() => onRemove(product.id)} aria-label={`Remove ${product.name}`}>×</button>
+              <button className="comparison-image" onClick={() => onOpen(product)}>
+                <Image src={product.imageUrl} unoptimized alt={product.name} width={420} height={420} sizes="(max-width: 760px) 70vw, 24vw" />
+              </button>
+              <button className="product-name" onClick={() => onOpen(product)}>{product.name}</button>
+              <button className="primary" onClick={() => onAdd(product)} disabled={product.stockQuantity < 1}>Add to bag</button>
+            </article>
+          ))}
+          {rows.map((row) => {
+            const different = new Set(row.values).size > 1;
+            return (
+              <div className="comparison-row" key={row.label}>
+                <div className="comparison-label">{row.label}{different && <small>Different</small>}</div>
+                {row.values.map((value, index) => <div className={different ? "difference" : ""} key={`${row.label}-${products[index].id}`}>{value}</div>)}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function findSpecification(product: Product, label: string) {
+  const item = getProductProfile(product.id)?.specifications
+    .flatMap((group) => group.items)
+    .find((candidate) => candidate.label.toLowerCase() === label.toLowerCase());
+  return item?.value ?? "Not published";
 }
 
 function OrderSummary({
