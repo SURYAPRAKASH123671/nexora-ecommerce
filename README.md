@@ -1,6 +1,6 @@
 # Nexora Commerce
 
-Nexora is a premium India-focused ecommerce storefront built with React, TypeScript and a Spring Boot commerce backend. It includes product discovery, search, verified product variants, comparison, persistent cart and wishlist, secure checkout, order history, payment review workflows, administration, support pages, SEO and installable web-app support.
+Nexora is a premium India-focused ecommerce storefront. It includes product discovery, search, verified product variants, comparison, persistent cart and wishlist, secure checkout, order history, payment review workflows, administration, support pages, SEO and installable web-app support.
 
 ## Development
 

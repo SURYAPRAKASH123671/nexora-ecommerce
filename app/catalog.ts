@@ -50,9 +50,9 @@ export const categories = [
 
 export const fallbackProducts: Product[] = [
   ...makeProducts("Phones", 101, [
-    ["Samsung Galaxy S26 Ultra", "Galaxy AI flagship with an expansive display, S Pen and versatile camera system.", 129999, 139999, "New flagship"],
+    ["Samsung Galaxy S26 Ultra", "Premium flagship with an expansive display, S Pen and versatile camera system.", 129999, 139999, "New flagship"],
     ["Apple iPhone 16", "A18-powered iPhone with Camera Control, durable design and dependable all-day performance.", 69900, 79900, "Popular"],
-    ["Google Pixel 9", "Helpful Google AI, a bright Actua display and Pixel's signature computational camera.", 74999, 79999, "AI pick"],
+    ["Google Pixel 9", "Bright Actua display, polished Android experience and Pixel's signature computational camera.", 74999, 79999, "Camera pick"],
     ["OnePlus 13", "Flagship Snapdragon performance, Hasselblad cameras and fast wired charging.", 69999, 74999, "Bestseller"],
     ["Xiaomi 15", "Compact flagship performance with Leica optics and a vivid high-refresh display.", 64999, 69999],
     ["vivo X200", "ZEISS-backed portrait photography, premium performance and a long-lasting battery.", 65999, 69999, "Camera pick"],
@@ -100,7 +100,7 @@ export const fallbackProducts: Product[] = [
     ["Fujifilm Instax Mini 12", "Simple instant camera that creates credit-card-sized prints in seconds.", 7499, 8999, "Gift pick"],
   ]),
   ...makeProducts("Home Appliances", 601, [
-    ["Samsung Bespoke AI Refrigerator", "Premium connected refrigerator with flexible storage and intelligent energy features.", 89990, 104990, "Smart home"],
+    ["Samsung Bespoke Refrigerator", "Premium connected refrigerator with flexible storage and efficient energy features.", 89990, 104990, "Smart home"],
     ["LG InstaView Door-in-Door Refrigerator", "Feature-rich refrigerator with a viewing panel and organised family storage.", 124990, 139990, "Premium pick"],
     ["Dyson V12 Detect Slim", "Lightweight cordless vacuum with laser dust illumination and multiple cleaning tools.", 52900, 58900, "Bestseller"],
     ["Philips Airfryer HD9252", "Compact rapid-air fryer for lower-oil everyday cooking and easy presets.", 8995, 11995, "Kitchen favourite"],
