@@ -7,6 +7,7 @@ import "./enterprise.css";
 import "./comparison.css";
 import "./catalog-scale.css";
 import "./polish.css";
+import "./header-polish.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({

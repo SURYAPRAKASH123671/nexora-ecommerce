@@ -415,3 +415,15 @@ test("smartphone bulk imports preserve source provenance and never fabricate com
   assert.match(page, /Validate & import/);
   assert.match(page, /never generated/);
 });
+
+test("premium header supports accessible search, navigation and responsive interaction states", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/header-polish.css", import.meta.url), "utf8");
+  for (const behavior of ["handleSearchKeyDown", "ArrowDown", "ArrowUp", "Escape", "recentSearches", "trendingSearches", "startVoiceSearch", "aria-activedescendant", "aria-current"]) assert.match(page, new RegExp(behavior));
+  for (const icon of ["Store", "UserRound", "Columns3", "ShoppingBag", "Sun", "Moon"]) assert.match(page, new RegExp(`<${icon}`));
+  assert.match(styles, /topbar-scrolled/);
+  assert.match(styles, /backdrop-filter/);
+  assert.match(styles, /prefers-reduced-motion/);
+  assert.match(styles, /@media \(max-width: 470px\)/);
+  assert.match(styles, /category-strip.*position: sticky/s);
+});

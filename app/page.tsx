@@ -2,6 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import {
+  Columns3,
+  LoaderCircle,
+  Mic,
+  Moon,
+  Search,
+  ShoppingBag,
+  Store,
+  Sun,
+  UserRound,
+  X,
+} from "lucide-react";
 import { categories, fallbackProducts, productSlug, type Product } from "./catalog";
 import PremiumProductPage from "./PremiumProductPage";
 import { getProductProfile, type ProductConfiguration } from "./product-details";
@@ -179,6 +191,11 @@ export default function Home({
   const [catalogHasMore, setCatalogHasMore] = useState(false);
   const [mobileBrand, setMobileBrand] = useState("All brands");
   const [mobileBudget, setMobileBudget] = useState("All prices");
+  const [headerScrolled, setHeaderScrolled] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchActiveIndex, setSearchActiveIndex] = useState(-1);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [voiceListening, setVoiceListening] = useState(false);
 
   useEffect(() => {
     const pages: InfoPage[] = [
@@ -278,6 +295,8 @@ export default function Home({
       if (Array.isArray(savedWishlist)) setWishlist(savedWishlist);
       if (Array.isArray(savedRecent)) setRecentlyViewed(savedRecent);
       if (Array.isArray(savedComparison)) setComparisonIds(savedComparison.slice(0, 4));
+      const savedSearches = JSON.parse(localStorage.getItem("nexora-recent-searches") ?? "[]");
+      if (Array.isArray(savedSearches)) setRecentSearches(savedSearches.filter((item): item is string => typeof item === "string").slice(0, 5));
       setDarkMode(localStorage.getItem("nexora-theme") === "dark");
     } catch {
       localStorage.removeItem("nexora-cart");
@@ -304,7 +323,10 @@ export default function Home({
       () => setHeroIndex((current) => (current + 1) % 4),
       5200,
     );
-    const onScroll = () => setShowBackToTop(window.scrollY > 700);
+    const onScroll = () => {
+      setShowBackToTop(window.scrollY > 700);
+      setHeaderScrolled(window.scrollY > 8);
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       window.clearInterval(timer);
@@ -451,6 +473,14 @@ export default function Home({
         )
         .slice(0, 5)
     : [];
+  const trendingSearches = useMemo(
+    () => products
+      .filter((product) => product.bestSeller)
+      .sort((a, b) => b.reviews - a.reviews)
+      .slice(0, 5)
+      .map((product) => product.name),
+    [products],
+  );
   const recommendedProducts = useMemo(() => {
     const signals = new Map<string, number>();
     const addSignal = (product: Product | undefined, weight: number) => {
@@ -575,7 +605,53 @@ export default function Home({
 
   function submitSearch(event: React.FormEvent) {
     event.preventDefault();
+    rememberSearch(query);
+    setSearchOpen(false);
     navigate("catalog");
+  }
+
+  function rememberSearch(value: string) {
+    const term = value.trim();
+    if (!term) return;
+    setRecentSearches((current) => {
+      const next = [term, ...current.filter((item) => item.toLowerCase() !== term.toLowerCase())].slice(0, 5);
+      localStorage.setItem("nexora-recent-searches", JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function chooseSearch(value: string, product?: Product) {
+    setQuery(value);
+    rememberSearch(value);
+    setSearchOpen(false);
+    setSearchActiveIndex(-1);
+    if (product) openProduct(product);
+    else navigate("catalog");
+  }
+
+  function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (!searchOpen) setSearchOpen(true);
+    if (event.key === "Escape") { setSearchOpen(false); setSearchActiveIndex(-1); return; }
+    if (!searchSuggestions.length) return;
+    if (event.key === "ArrowDown") { event.preventDefault(); setSearchActiveIndex((current) => (current + 1) % searchSuggestions.length); }
+    if (event.key === "ArrowUp") { event.preventDefault(); setSearchActiveIndex((current) => (current <= 0 ? searchSuggestions.length - 1 : current - 1)); }
+    if (event.key === "Enter" && searchActiveIndex >= 0) {
+      event.preventDefault();
+      const product = searchSuggestions[searchActiveIndex];
+      chooseSearch(product.name, product);
+    }
+  }
+
+  function startVoiceSearch() {
+    const SpeechRecognition = (window as unknown as { SpeechRecognition?: new () => { lang: string; interimResults: boolean; start: () => void; onresult: (event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void; onend: () => void; onerror: () => void }; webkitSpeechRecognition?: new () => { lang: string; interimResults: boolean; start: () => void; onresult: (event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void; onend: () => void; onerror: () => void } }).SpeechRecognition
+      ?? (window as unknown as { webkitSpeechRecognition?: new () => { lang: string; interimResults: boolean; start: () => void; onresult: (event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void; onend: () => void; onerror: () => void } }).webkitSpeechRecognition;
+    if (!SpeechRecognition) { showNotice("Voice search is not supported by this browser"); return; }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-IN"; recognition.interimResults = false;
+    recognition.onresult = (event) => { const transcript = event.results[0]?.[0]?.transcript?.trim(); if (transcript) { setQuery(transcript); setSearchOpen(true); } };
+    recognition.onend = () => setVoiceListening(false);
+    recognition.onerror = () => { setVoiceListening(false); showNotice("Voice search could not start"); };
+    setVoiceListening(true); recognition.start();
   }
 
   function cycleSort() {
@@ -590,7 +666,7 @@ export default function Home({
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <header className="topbar">
+      <header className={`topbar${headerScrolled ? " topbar-scrolled" : ""}`}>
         <button
           className="brand"
           onClick={() => navigate("home")}
@@ -601,77 +677,93 @@ export default function Home({
           </span>
           <span>Nexora</span>
         </button>
-        <form className="search" onSubmit={submitSearch} role="search">
-          <span aria-hidden="true">⌕</span>
+        <form className={`search${searchOpen ? " search-open" : ""}`} onSubmit={submitSearch} role="search" onFocus={() => setSearchOpen(true)} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) { setSearchOpen(false); setSearchActiveIndex(-1); } }}>
+          <Search className="search-leading" aria-hidden="true" />
           <input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => { setQuery(event.target.value); setSearchActiveIndex(-1); setSearchOpen(true); }}
+            onKeyDown={handleSearchKeyDown}
             placeholder="Search products, categories and more"
             aria-label="Search products"
+            aria-expanded={searchOpen}
+            aria-controls="nexora-search-panel"
+            aria-activedescendant={searchActiveIndex >= 0 ? `search-option-${searchSuggestions[searchActiveIndex]?.id}` : undefined}
+            autoComplete="off"
           />
-          {query && (
+          {loading && query.trim() && <LoaderCircle className="search-loader" aria-label="Searching" />}
+          {query && !loading && (
             <button
+              className="search-icon-button"
               type="button"
-              onClick={() => setQuery("")}
+              onClick={() => { setQuery(""); setSearchActiveIndex(-1); }}
               aria-label="Clear search"
             >
-              ×
+              <X aria-hidden="true" />
             </button>
           )}
-          {searchSuggestions.length > 0 && (
-            <div className="search-suggestions" role="listbox" aria-label="Search suggestions">
-              <small>Suggested products</small>
+          <button className={`search-icon-button voice-search${voiceListening ? " listening" : ""}`} type="button" onClick={startVoiceSearch} aria-label={voiceListening ? "Listening for search" : "Search by voice"} aria-pressed={voiceListening}>
+            <Mic aria-hidden="true" />
+          </button>
+          {searchOpen && (
+            <div id="nexora-search-panel" className="search-suggestions" role={searchSuggestions.length ? "listbox" : "dialog"} aria-label="Search suggestions">
+              {query.trim() ? <small>Suggested products</small> : <small>Discover</small>}
               {searchSuggestions.map((product) => (
                 <button
                   type="button"
                   key={product.id}
-                  onClick={() => {
-                    setQuery(product.name);
-                    openProduct(product);
-                  }}
+                  id={`search-option-${product.id}`}
+                  onClick={() => chooseSearch(product.name, product)}
                   role="option"
-                  aria-selected="false"
+                  aria-selected={searchSuggestions[searchActiveIndex]?.id === product.id}
+                  className={searchSuggestions[searchActiveIndex]?.id === product.id ? "active" : ""}
                 >
                   <Image src={product.imageUrl} unoptimized alt="" width={42} height={42} />
                   <span><b>{product.name}</b><small>{product.categoryName} · {money.format(product.price)}</small></span>
                 </button>
               ))}
+              {!query.trim() && recentSearches.length > 0 && <div className="search-chip-section"><span><b>Recent searches</b><button type="button" onClick={() => { setRecentSearches([]); localStorage.removeItem("nexora-recent-searches"); }}>Clear</button></span><div>{recentSearches.map((item) => <button type="button" key={item} onClick={() => chooseSearch(item)}>{item}</button>)}</div></div>}
+              {!query.trim() && <div className="search-chip-section"><span><b>Trending now</b></span><div>{trendingSearches.map((item) => <button type="button" key={item} onClick={() => chooseSearch(item)}>{item}</button>)}</div></div>}
+              {query.trim() && !searchSuggestions.length && !loading && <div className="search-empty"><Search aria-hidden="true"/><b>No close matches yet</b><span>Press Enter to search the complete catalogue.</span></div>}
             </div>
           )}
         </form>
         <nav className="header-actions" aria-label="Primary navigation">
           <button
+            className={darkMode ? "active" : ""}
             onClick={() => setDarkMode((current) => !current)}
             aria-label={darkMode ? "Use light theme" : "Use dark theme"}
+            aria-pressed={darkMode}
           >
-            <span aria-hidden="true">{darkMode ? "☀" : "◐"}</span>
+            <span aria-hidden="true">{darkMode ? <Sun /> : <Moon />}</span>
             <span>Theme</span>
           </button>
-          <button onClick={() => navigate("catalog")}>
-            <span aria-hidden="true">▦</span>
+          <button className={view === "catalog" ? "active" : ""} onClick={() => navigate("catalog")} aria-current={view === "catalog" ? "page" : undefined}>
+            <span aria-hidden="true"><Store /></span>
             <span>Shop</span>
           </button>
-          <button onClick={() => navigate("account")}>
-            <span aria-hidden="true">◯</span>
+          <button className={view === "account" ? "active" : ""} onClick={() => navigate("account")} aria-current={view === "account" ? "page" : undefined}>
+            <span aria-hidden="true"><UserRound /></span>
             <span>Account</span>
           </button>
-          <button className="compare-action" onClick={() => navigate("compare")}>
-            <span aria-hidden="true">⇄</span>
+          <button className={`compare-action${view === "compare" ? " active" : ""}`} onClick={() => navigate("compare")} aria-current={view === "compare" ? "page" : undefined}>
+            <span aria-hidden="true"><Columns3 /></span>
             <span>Compare</span>
-            {comparisonIds.length > 0 && <b>{comparisonIds.length}</b>}
+            {comparisonIds.length > 0 && <b key={comparisonIds.length}>{comparisonIds.length}</b>}
           </button>
-          <button className="cart-action" onClick={() => navigate("cart")}>
-            <span aria-hidden="true">◇</span>
+          <button className={`cart-action${view === "cart" ? " active" : ""}`} onClick={() => navigate("cart")} aria-current={view === "cart" ? "page" : undefined}>
+            <span aria-hidden="true"><ShoppingBag /></span>
             <span>Bag</span>
-            {cartCount > 0 && <b>{cartCount}</b>}
+            {cartCount > 0 && <b key={cartCount}>{cartCount}</b>}
           </button>
         </nav>
       </header>
 
-      <div className="category-strip" aria-label="Shop categories">
+      <nav className="category-strip" aria-label="Shop categories">
         {categories.slice(1).map((item) => (
           <button
             key={item}
+            className={view === "catalog" && category === item ? "active" : ""}
+            aria-current={view === "catalog" && category === item ? "page" : undefined}
             onClick={() => {
               setCategory(item);
               navigate("catalog");
@@ -682,7 +774,7 @@ export default function Home({
         ))}
         <span className="strip-spacer" />
         <button onClick={() => navigate("admin")}>Admin preview</button>
-      </div>
+      </nav>
 
       {notice && (
         <div className="toast" role="status">
