@@ -977,6 +977,10 @@ export default function Home({
         }),
       });
       if (!response.ok) throw new Error(await readApiError(response));
+      const result = (await response.json()) as {
+        automatedReply?: string;
+        createdAt?: string;
+      };
       const optimistic: SupportMessage = {
         id: crypto.randomUUID(),
         sender_role: "CUSTOMER",
@@ -986,7 +990,22 @@ export default function Home({
         read_at: null,
         created_at: new Date().toISOString(),
       };
-      setSupportMessages((current) => [...current, optimistic]);
+      const assistantReply: SupportMessage | null = result.automatedReply
+        ? {
+            id: crypto.randomUUID(),
+            sender_role: "SYSTEM",
+            sender_email: "assistant@nexora.support",
+            body: result.automatedReply,
+            delivery_status: "DELIVERED",
+            read_at: null,
+            created_at: result.createdAt ?? new Date().toISOString(),
+          }
+        : null;
+      setSupportMessages((current) => [
+        ...current,
+        optimistic,
+        ...(assistantReply ? [assistantReply] : []),
+      ]);
       setSupportDraft("");
     } catch (caught) {
       showNotice(

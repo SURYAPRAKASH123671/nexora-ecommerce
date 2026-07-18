@@ -452,6 +452,9 @@ test("support system persists protected conversations, files, tickets and agent 
   for (const table of ["support_conversations", "support_messages", "support_attachments", "support_tickets", "support_internal_notes"]) assert.match(schema, new RegExp(table));
   assert.match(conversations, /requireSiteUser/);
   assert.match(messages, /20/);
+  assert.match(messages, /createAutomatedReply/);
+  assert.match(messages, /assistant@nexora\.support/);
+  assert.match(messages, /OTP, UPI PIN, CVV/);
   assert.match(files, /%PDF-/);
   assert.match(files, /PENDING_EXTERNAL_SCAN/);
   assert.match(admin, /requireAdmin/);
