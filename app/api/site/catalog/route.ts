@@ -56,6 +56,8 @@ export async function GET(request: Request) {
         rating: "rating_tenths DESC, review_count DESC, id ASC",
         newest: "new_arrival DESC, created_at DESC, id DESC",
         discount: "discount_percent DESC, id ASC",
+        popularity: "review_count DESC, rating_tenths DESC, id ASC",
+        "best-seller": "best_seller DESC, review_count DESC, id ASC",
       }[params.get("sort") ?? ""] ??
       "best_seller DESC, rating_tenths DESC, id ASC";
     const count = await DB.prepare(

@@ -20,7 +20,7 @@ type View =
   | "account"
   | "admin"
   | "information";
-type SortMode = "recommended" | "price-low" | "price-high" | "rating";
+type SortMode = "recommended" | "newest" | "popularity" | "best-seller" | "rating" | "price-low" | "price-high" | "discount";
 type CatalogResponse = {
   items: Product[];
   pagination: {
@@ -114,15 +114,23 @@ const money = new Intl.NumberFormat("en-IN", {
 });
 const sortModes: SortMode[] = [
   "recommended",
+  "newest",
+  "popularity",
+  "best-seller",
+  "rating",
   "price-low",
   "price-high",
-  "rating",
+  "discount",
 ];
 const sortLabels: Record<SortMode, string> = {
   recommended: "Recommended",
+  newest: "Newest",
+  popularity: "Popularity",
+  "best-seller": "Best seller",
   "price-low": "Price: Low to high",
   "price-high": "Price: High to low",
   rating: "Customer rating",
+  discount: "Biggest discount",
 };
 
 export type StorefrontInitialProps = {
@@ -169,6 +177,8 @@ export default function Home({
   const [catalogPage, setCatalogPage] = useState(1);
   const [catalogTotal, setCatalogTotal] = useState(fallbackProducts.length);
   const [catalogHasMore, setCatalogHasMore] = useState(false);
+  const [mobileBrand, setMobileBrand] = useState("All brands");
+  const [mobileBudget, setMobileBudget] = useState("All prices");
 
   useEffect(() => {
     const pages: InfoPage[] = [
@@ -314,6 +324,7 @@ export default function Home({
       if (query.trim()) params.set("q", query.trim());
       if (category !== "All") params.set("category", category);
       if (sortMode !== "recommended") params.set("sort", sortMode);
+      if (category === "Phones" && mobileBrand !== "All brands") params.set("brand", mobileBrand);
       setLoading(true);
       fetch(`/api/site/catalog?${params}`, { signal: controller.signal })
       .then((response) => {
@@ -336,7 +347,7 @@ export default function Home({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query, category, sortMode, initialProductSlug]);
+  }, [query, category, sortMode, initialProductSlug, mobileBrand]);
 
   async function loadMoreProducts() {
     if (loading || !catalogHasMore) return;
@@ -350,6 +361,7 @@ export default function Home({
       if (query.trim()) params.set("q", query.trim());
       if (category !== "All") params.set("category", category);
       if (sortMode !== "recommended") params.set("sort", sortMode);
+      if (category === "Phones" && mobileBrand !== "All brands") params.set("brand", mobileBrand);
       const response = await fetch(`/api/site/catalog?${params}`);
       if (!response.ok) throw new Error("Catalog unavailable");
       const data = (await response.json()) as CatalogResponse;
@@ -405,8 +417,17 @@ export default function Home({
       return [...matches].sort(
         (a, b) => b.rating - a.rating || b.reviews - a.reviews,
       );
+    if (sortMode === "discount") return [...matches].sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0));
+    if (sortMode === "newest") return [...matches].sort((a, b) => Number(Boolean(b.newArrival)) - Number(Boolean(a.newArrival)) || b.id - a.id);
+    if (sortMode === "best-seller" || sortMode === "popularity") return [...matches].sort((a, b) => Number(Boolean(b.bestSeller)) - Number(Boolean(a.bestSeller)) || b.reviews - a.reviews);
     return matches;
   }, [products, query, category, sortMode]);
+
+  const mobileFiltered = useMemo(() => {
+    if (category !== "Phones" || mobileBudget === "All prices") return filtered;
+    const [minimum, maximum] = mobileBudget.split("-").map(Number);
+    return filtered.filter((product) => product.price >= minimum && (!maximum || product.price <= maximum));
+  }, [filtered, category, mobileBudget]);
 
   const cartCount = cart.reduce((total, line) => total + line.quantity, 0);
   const subtotal = cart.reduce(
@@ -960,7 +981,7 @@ export default function Home({
                       : category}
                 </h1>
                 <p>
-                  Showing {filtered.length.toLocaleString("en-IN")} of{" "}
+                  Showing {mobileFiltered.length.toLocaleString("en-IN")} of{" "}
                   {catalogTotal.toLocaleString("en-IN")} products
                 </p>
               </div>
@@ -1003,6 +1024,17 @@ export default function Home({
                 </ul>
               </div>
             )}
+            {category === "Phones" && (
+              <MobileMarketplaceToolbar
+                products={products}
+                brand={mobileBrand}
+                budget={mobileBudget}
+                sort={sortMode}
+                onBrand={setMobileBrand}
+                onBudget={setMobileBudget}
+                onSort={setSortMode}
+              />
+            )}
             <div className="filter-chips" aria-label="Filter by category">
               {categories.map((item) => (
                 <button
@@ -1014,9 +1046,9 @@ export default function Home({
                 </button>
               ))}
             </div>
-            {filtered.length ? (
+            {mobileFiltered.length ? (
               <div className="product-grid catalog-grid">
-                {filtered.map((product) => (
+                {mobileFiltered.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}
@@ -1981,6 +2013,40 @@ function ProductSection({
   );
 }
 
+function MobileMarketplaceToolbar({
+  products,
+  brand,
+  budget,
+  sort,
+  onBrand,
+  onBudget,
+  onSort,
+}: {
+  products: Product[];
+  brand: string;
+  budget: string;
+  sort: SortMode;
+  onBrand: (value: string) => void;
+  onBudget: (value: string) => void;
+  onSort: (value: SortMode) => void;
+}) {
+  const brands = Array.from(new Set(products.filter((product) => product.categoryName === "Phones").map((product) => product.brand ?? product.name.split(" ")[0]))).sort();
+  return (
+    <section className="mobile-marketplace-toolbar" aria-label="Smartphone marketplace controls">
+      <div className="mobile-marketplace-hero">
+        <div><span className="eyebrow">Nexora Mobile</span><h2>Find the right smartphone</h2><p>India-market models with source-backed details, clear pricing and configuration-aware shopping.</p></div>
+        <div className="mobile-marketplace-metrics"><span><b>{products.filter((product) => product.categoryName === "Phones").length}</b> verified listings</span><span><b>{brands.length}</b> represented brands</span><span><b>4</b> products per comparison</span></div>
+      </div>
+      <div className="mobile-filter-grid">
+        <label>Brand<select value={brand} onChange={(event) => onBrand(event.target.value)}><option>All brands</option>{brands.map((item) => <option key={item}>{item}</option>)}</select></label>
+        <label>Price<select value={budget} onChange={(event) => onBudget(event.target.value)}><option>All prices</option><option value="0-20000">Under ₹20,000</option><option value="20000-40000">₹20,000–₹40,000</option><option value="40000-70000">₹40,000–₹70,000</option><option value="70000-0">Above ₹70,000</option></select></label>
+        <label>Sort by<select value={sort} onChange={(event) => onSort(event.target.value as SortMode)}>{sortModes.map((mode) => <option value={mode} key={mode}>{sortLabels[mode]}</option>)}</select></label>
+      </div>
+      <div className="mobile-capability-strip" aria-label="Smartphone catalogue capabilities"><span>5G ready</span><span>Colour variants</span><span>Storage options</span><span>Official-source profiles</span><span>EMI estimate</span><span>Exchange eligibility</span></div>
+    </section>
+  );
+}
+
 function GroceryMarketplace({
   products,
   onOpen,
@@ -2085,7 +2151,7 @@ function ProductCard({
 
   return (
     <article
-      className={`product-card${product.categoryName === "Grocery" ? " grocery-card" : ""}`}
+      className={`product-card${product.categoryName === "Grocery" ? " grocery-card" : ""}${product.categoryName === "Phones" ? " mobile-product-card" : ""}`}
     >
       <div className="product-image" onClick={() => onOpen(product)}>
         <div className="grocery-badge-rail">
@@ -2156,6 +2222,13 @@ function ProductCard({
               : "Availability confirmed after delivery-location check"}
           </div>
         )}
+        {product.categoryName === "Phones" && (
+          <div className="mobile-commerce-details">
+            <span><b>EMI</b> from {money.format(Math.ceil(product.price / 12))}/month</span>
+            <span><b>Exchange</b> eligibility checked at checkout</span>
+            <span><b>Delivery</b> free · PIN-code estimate available</span>
+          </div>
+        )}
         <div className="card-bottom">
           <div>
             <strong>{money.format(product.price)}</strong>
@@ -2183,6 +2256,13 @@ function ProductCard({
           <div className="grocery-stock-row">
             <b>In stock</b>
             <span>Free delivery · arrives in 2–3 days</span>
+          </div>
+        )}
+        {product.categoryName === "Phones" && (
+          <div className="mobile-card-actions">
+            <button className="quick-view" onClick={() => onOpen(product)}>Quick view</button>
+            <button className="quick-add" onClick={() => onAdd(product)} disabled={product.stockQuantity < 1}>Add to bag</button>
+            <button className="quick-share" onClick={shareProduct}>Share</button>
           </div>
         )}
         {product.categoryName === "Grocery" && (

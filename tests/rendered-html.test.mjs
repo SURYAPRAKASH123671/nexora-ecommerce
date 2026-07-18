@@ -382,3 +382,20 @@ test("global polish system covers accessibility, motion and resilient route stat
   assert.match(error, /Try again/);
   assert.match(loading, /aria-busy="true"/);
 });
+
+test("mobile marketplace is filterable, scalable and governed by verified-source rules", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const route = await readFile(new URL("../app/api/site/catalog/route.ts", import.meta.url), "utf8");
+  const governance = JSON.parse(await readFile(new URL("../mobile-catalog-governance.json", import.meta.url), "utf8"));
+
+  assert.match(page, /MobileMarketplaceToolbar/);
+  assert.match(page, /All brands/);
+  assert.match(page, /All prices/);
+  assert.match(page, /EMI.*from/);
+  assert.match(page, /Exchange.*eligibility/);
+  assert.match(route, /review_count DESC/);
+  assert.match(route, /discount_percent DESC/);
+  assert.ok(governance.requiredFields.length >= 15);
+  assert.ok(governance.verifiedCollectionSources.every((source) => source.url.startsWith("https://")));
+  assert.match(governance.publicationRule, /only after/i);
+});
