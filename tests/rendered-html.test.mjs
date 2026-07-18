@@ -445,7 +445,9 @@ test("premium product gallery supports fluid keyboard and swipe navigation", asy
 test("featured hero uses Nexora-owned editorial product controls and motion", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/reference-hero.css", import.meta.url), "utf8");
-  for (const control of ["hero-product-nav", "hero-colour-controls", "hero-gallery-controls", "Previous featured product", "Next featured product"]) assert.match(page, new RegExp(control));
+  for (const control of ["hero-product-nav", "hero-colour-controls", "hero-gallery-controls", "Previous featured electronics product", "Next featured electronics product"]) assert.match(page, new RegExp(control));
+  assert.match(page, /animatedHeroCategories/);
+  for (const category of ["Phones", "Audio", "Computing", "Wearables", "Cameras", "Gaming"]) assert.match(page, new RegExp(`"${category}"`));
   assert.match(styles, /nexora-product-enter/);
   assert.match(styles, /will-change: transform,opacity/);
   assert.match(styles, /prefers-reduced-motion/);

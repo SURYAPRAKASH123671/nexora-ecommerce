@@ -173,6 +173,15 @@ const sortLabels: Record<SortMode, string> = {
   discount: "Biggest discount",
 };
 
+const animatedHeroCategories = new Set([
+  "Phones",
+  "Audio",
+  "Computing",
+  "Wearables",
+  "Cameras",
+  "Gaming",
+]);
+
 export type StorefrontInitialProps = {
   initialView?: View;
   initialProductSlug?: string;
@@ -577,7 +586,22 @@ export default function Home({
   );
   const shipping = subtotal > 5000 || subtotal === 0 ? 0 : 99;
   const total = subtotal + shipping;
-  const currentHero = products[heroIndex % Math.min(4, products.length)];
+  const heroProducts = useMemo(
+    () => {
+      const electronics = products.filter((product) =>
+        animatedHeroCategories.has(product.categoryName),
+      );
+      return (electronics.length
+        ? electronics
+        : fallbackProducts.filter((product) =>
+            animatedHeroCategories.has(product.categoryName),
+          )
+      ).slice(0, 4);
+    },
+    [products],
+  );
+  const currentHero =
+    heroProducts[heroIndex % heroProducts.length] ?? fallbackProducts[0];
   const recentProducts = recentlyViewed
     .map((id) => products.find((product) => product.id === id))
     .filter((product): product is Product => Boolean(product))
@@ -1491,12 +1515,12 @@ export default function Home({
                   </button>
                 </div>
                 <nav className="hero-colour-controls" aria-label="Choose featured product">
-                  {[0, 1, 2, 3].map((index) => (
+                  {heroProducts.map((product, index) => (
                     <button
-                      key={index}
+                      key={product.id}
                       className={`hero-colour swatch-${index}${heroIndex === index ? " active" : ""}`}
                       onClick={() => setHeroIndex(index)}
-                      aria-label={`Show ${products[index]?.name ?? `featured product ${index + 1}`}`}
+                      aria-label={`Show ${product.name}`}
                       aria-pressed={heroIndex === index}
                     />
                   ))}
@@ -1517,9 +1541,9 @@ export default function Home({
                   priority
                 />
                 <div className="hero-gallery-controls">
-                  <span>{heroIndex + 1} / 4</span>
-                  <button onClick={() => setHeroIndex((heroIndex + 3) % 4)} aria-label="Previous featured product">←</button>
-                  <button onClick={() => setHeroIndex((heroIndex + 1) % 4)} aria-label="Next featured product">→</button>
+                  <span>{(heroIndex % heroProducts.length) + 1} / {heroProducts.length}</span>
+                  <button onClick={() => setHeroIndex((heroIndex + heroProducts.length - 1) % heroProducts.length)} aria-label="Previous featured electronics product">←</button>
+                  <button onClick={() => setHeroIndex((heroIndex + 1) % heroProducts.length)} aria-label="Next featured electronics product">→</button>
                 </div>
               </div>
             </section>
