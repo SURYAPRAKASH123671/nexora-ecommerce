@@ -464,7 +464,8 @@ test("Nexora design system and product finder remain original, explainable and f
   assert.match(page, /Rankings use recorded price and rating data, not generated claims/);
   assert.match(page, /does not invent specifications or availability/);
   assert.match(page, /visual discovery/);
-  assert.match(layout, /nexora-commerce-surya\.kssuryaprakash2\.chatgpt\.site/);
+  assert.match(layout, /nexora-web-virid\.vercel\.app/);
+  assert.doesNotMatch(`${page}\n${layout}`, /ChatGPT|OpenAI|Gemini|Claude|Copilot|AI-powered|Powered by AI/i);
 });
 
 test("support system persists protected conversations, files, tickets and agent handover", async () => {

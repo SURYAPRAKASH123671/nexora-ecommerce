@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    "https://nexora-commerce-surya.kssuryaprakash2.chatgpt.site",
+    "https://nexora-web-virid.vercel.app",
   ),
   title: "Nexora — Thoughtfully chosen",
   description:
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
     apple: "/favicon.ico",
   },
-  alternates: { canonical: "https://nexora-commerce-surya.kssuryaprakash2.chatgpt.site" },
+  alternates: { canonical: "https://nexora-web-virid.vercel.app" },
   openGraph: {
     title: "Nexora — Thoughtfully chosen",
     description:
@@ -67,7 +67,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "OnlineStore",
               name: "Nexora Commerce",
-              url: "https://nexora-commerce-surya.kssuryaprakash2.chatgpt.site",
+              url: "https://nexora-web-virid.vercel.app",
               email: "suryakannan32123@gmail.com",
               telephone: "+91 9150357320",
               areaServed: "IN",
