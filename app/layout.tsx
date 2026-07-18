@@ -22,6 +22,11 @@ export const metadata: Metadata = {
     "A premium commerce experience for technology and lifestyle essentials.",
   applicationName: "Nexora Commerce",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
   alternates: { canonical: "https://nexora-web-virid.vercel.app" },
   openGraph: {
     title: "Nexora — Thoughtfully chosen",
