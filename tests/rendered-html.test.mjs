@@ -261,8 +261,21 @@ test("portfolio grocery inventory enables shopping without presenting supplier s
   assert.match(migration, /stock_quantity = 12 \+ \(id % 24\)/);
   assert.match(migration, /Portfolio demo inventory/);
   assert.match(migration, /WHERE category_name = 'Grocery'/);
-  assert.match(page, /Demo inventory enabled/);
+  assert.match(page, /Fast checkout enabled/);
   assert.match(page, /Quick add/);
+});
+
+test("grocery delivery copy is premium while retaining final-order confirmation", async () => {
+  const migration = await readFile(
+    new URL("../drizzle/0008_polish_grocery_delivery_copy.sql", import.meta.url),
+    "utf8",
+  );
+  const product = await readFile(
+    new URL("../app/PremiumProductPage.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /Free standard delivery/);
+  assert.match(product, /Availability remains subject to final order confirmation/);
 });
 
 function jpegDimensions(buffer) {

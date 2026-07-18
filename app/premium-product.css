@@ -801,6 +801,22 @@
   display: none;
 }
 
+.grocery-offer-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  margin: -8px 0 22px;
+  border: 1px solid #f2d9c8;
+  border-radius: 14px;
+  background: #fff8f2;
+  color: #6f3b1c;
+  padding: 13px 16px;
+}
+.grocery-offer-strip b { color: #b42318; }
+.grocery-offer-strip small { flex-basis: 100%; color: #806856; }
+.grocery-facts-layout { margin-top: 70px; }
+
 .admin-questions {
   margin: 26px 0;
   border: 1px solid var(--line);

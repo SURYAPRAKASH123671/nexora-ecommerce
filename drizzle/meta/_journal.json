@@ -57,6 +57,13 @@
       "when": 1784374200000,
       "tag": "0007_enable_grocery_demo_inventory",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1784376000000,
+      "tag": "0008_polish_grocery_delivery_copy",
+      "breakpoints": true
     }
   ]
 }

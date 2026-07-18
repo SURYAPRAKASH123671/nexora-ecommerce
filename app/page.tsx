@@ -969,14 +969,14 @@ export default function Home({
                   <p>
                     Curated India-market products with retailer-sourced pack
                     details, consistent 1200 × 1200 imagery and transparent
-                    portfolio-demo inventory and complete shopping actions.
+                    complete shopping actions and location-aware delivery.
                   </p>
                 </div>
                 <ul aria-label="Grocery catalogue standards">
                   <li>64 genuine products</li>
                   <li>33 familiar brands</li>
                   <li>Verified pack sizes</li>
-                  <li>Demo inventory enabled</li>
+                  <li>Fast checkout enabled</li>
                 </ul>
               </div>
             )}
@@ -1947,16 +1947,36 @@ function ProductCard({
   compared?: boolean;
   onCompare?: (id: number) => void;
 }) {
+  const saved = product.previousPrice
+    ? Math.max(0, product.previousPrice - product.price)
+    : 0;
+  const marketplaceBadges = [
+    product.bestSeller ? "Bestseller" : null,
+    product.newArrival ? "New arrival" : null,
+    (product.discount ?? 0) >= 30 ? "Limited offer" : null,
+    product.rating >= 4.4 ? "Top rated" : null,
+    product.stockQuantity > 0 ? "Fast delivery" : null,
+  ].filter(Boolean).slice(0, 2) as string[];
+
+  async function shareProduct() {
+    const url = `${window.location.origin}/products/${productSlug(product.name)}`;
+    if (navigator.share) {
+      await navigator.share({ title: product.name, url }).catch(() => undefined);
+    } else {
+      await navigator.clipboard?.writeText(url);
+    }
+  }
+
   return (
     <article
       className={`product-card${product.categoryName === "Grocery" ? " grocery-card" : ""}`}
     >
       <div className="product-image" onClick={() => onOpen(product)}>
-        {(product.badge || (product.discount ?? 0) > 0) && (
-          <span>
-            {product.badge ?? `${product.discount}% off`}
-          </span>
-        )}
+        <div className="grocery-badge-rail">
+          {(marketplaceBadges.length ? marketplaceBadges : [product.badge]).filter(Boolean).map((badge) => (
+            <span key={badge}>{badge}</span>
+          ))}
+        </div>
         <button
           className={liked ? "liked" : ""}
           onClick={(event) => {
@@ -2036,6 +2056,19 @@ function ProductCard({
             {product.stockQuantity < 1 ? "×" : "+"}
           </button>
         </div>
+        {product.categoryName === "Grocery" && saved > 0 && (
+          <div className="grocery-savings">
+            <b>{product.discount}% off</b>
+            <span>You save {money.format(saved)}</span>
+            <small>Offer price · coupon eligibility at checkout</small>
+          </div>
+        )}
+        {product.categoryName === "Grocery" && (
+          <div className="grocery-stock-row">
+            <b>In stock</b>
+            <span>Free delivery · arrives in 2–3 days</span>
+          </div>
+        )}
         {product.categoryName === "Grocery" && (
           <div className="grocery-quick-actions">
             <button className="quick-view" onClick={() => onOpen(product)}>
@@ -2048,6 +2081,9 @@ function ProductCard({
               }
             >
               {product.stockQuantity > 0 ? "Quick add" : "Check availability"}
+            </button>
+            <button className="quick-share" onClick={shareProduct} aria-label={`Share ${product.name}`}>
+              Share
             </button>
           </div>
         )}

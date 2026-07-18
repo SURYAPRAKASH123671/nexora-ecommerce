@@ -16,7 +16,13 @@ for item in manifest["records"]:
         original = Image.open(io.BytesIO(response.read(8_000_000))).convert("RGB")
     clean = ImageOps.contain(original, (1000, 1000), Image.Resampling.LANCZOS)
     clean = ImageEnhance.Sharpness(clean).enhance(1.08)
-    canvas = Image.new("RGB", (1200, 1200), (250, 250, 248))
+    pixels = clean.load()
+    for y in range(clean.height):
+        for x in range(clean.width):
+            red, green, blue = pixels[x, y]
+            if min(red, green, blue) >= 222 and max(red, green, blue) - min(red, green, blue) <= 26:
+                pixels[x, y] = (255, 255, 255)
+    canvas = Image.new("RGB", (1200, 1200), (255, 255, 255))
     canvas.paste(clean, ((1200 - clean.width) // 2, (1200 - clean.height) // 2))
     destination = ROOT / "public" / item["imagePath"].lstrip("/")
     canvas.save(destination, "JPEG", quality=92, optimize=True, progressive=True)

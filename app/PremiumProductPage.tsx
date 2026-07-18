@@ -89,6 +89,11 @@ export default function PremiumProductPage({
   const selectedMedia = media[Math.min(mediaIndex, media.length - 1)];
   const outOfStock = configuration.stockQuantity < 1;
   const monthly = Math.ceil(configuration.price / emiMonths);
+  const isGrocery = product.categoryName === "Grocery";
+  const savedAmount = configuration.previousPrice
+    ? Math.max(0, configuration.previousPrice - configuration.price)
+    : 0;
+  const ingredientNote = product.description.match(/Ingredients: ([^.]+(?:\.[^.]+)*)/i)?.[1];
 
   function selectColour(nextColour: string) {
     setColourId(nextColour);
@@ -204,6 +209,11 @@ export default function PremiumProductPage({
           <div className="product-identity">
             <span className="eyebrow">{product.categoryName}</span>
             <h1>{profile?.model ?? product.name}</h1>
+            {isGrocery && (
+              <p className="model-line">
+                {product.brand} · {product.subcategoryName} · Pack size {product.size}
+              </p>
+            )}
             {profile && (
               <p className="model-line">
                 {profile.brand} · Introduced {profile.launchYear} · SKU{" "}
@@ -216,8 +226,12 @@ export default function PremiumProductPage({
           </div>
 
           <div className="verified-review-line">
-            <strong>New listing</strong>
-            <span>No unverified rating data</span>
+            <strong>{product.reviews > 0 ? `${product.rating} ★` : "New listing"}</strong>
+            <span>
+              {product.reviews > 0
+                ? `${product.reviews.toLocaleString("en-IN")} retailer ratings · source-verified catalogue snapshot`
+                : "No unverified rating data"}
+            </span>
           </div>
 
           <div className="price-line premium-price">
@@ -234,6 +248,13 @@ export default function PremiumProductPage({
               </>
             )}
           </div>
+          {isGrocery && savedAmount > 0 && (
+            <div className="grocery-offer-strip">
+              <b>{product.discount}% off</b>
+              <span>You save {money.format(savedAmount)}</span>
+              <small>Limited-period catalogue price · coupons checked at checkout</small>
+            </div>
+          )}
 
           {profile && colour && (
             <div className="premium-choice-block">
@@ -301,7 +322,7 @@ export default function PremiumProductPage({
               <p>
                 {outOfStock
                   ? "Choose another colour or storage option."
-                  : `${configuration.stockQuantity} units in Nexora inventory · estimated delivery in 2–3 days to ${pin}`}
+                  : `${configuration.stockQuantity} units available · free delivery estimated in 2–3 days to ${pin}`}
               </p>
             </div>
           </div>
@@ -448,6 +469,42 @@ export default function PremiumProductPage({
               <b>{profile.sourceLabel}</b>
               <small>Verified {profile.verifiedOn} ↗</small>
             </a>
+          </aside>
+        </div>
+      ) : isGrocery ? (
+        <div className="product-facts-layout grocery-facts-layout">
+          <section className="product-facts-main">
+            <div className="premium-section-heading">
+              <span className="eyebrow">Product information</span>
+              <h2>Pack details and customer care</h2>
+              <p>Retail catalogue facts are shown as recorded; variable legal declarations remain tied to the sealed pack.</p>
+            </div>
+            <div className="spec-group">
+              <h3>Product</h3>
+              <dl>
+                <div><dt>Brand</dt><dd>{product.brand}</dd></div>
+                <div><dt>Pack size</dt><dd>{product.size}</dd></div>
+                <div><dt>Category</dt><dd>{product.subcategoryName}</dd></div>
+                <div><dt>MRP</dt><dd>{money.format(product.previousPrice ?? product.price)}</dd></div>
+                <div><dt>Selling price</dt><dd>{money.format(product.price)}</dd></div>
+                <div><dt>Availability</dt><dd>In stock · {product.stockQuantity} units</dd></div>
+              </dl>
+            </div>
+            <div className="spec-group">
+              <h3>Food and pack declaration</h3>
+              <dl>
+                <div><dt>Ingredients</dt><dd>{ingredientNote ?? "Refer to the current sealed pack label"}</dd></div>
+                <div><dt>Nutrition</dt><dd>{product.description.includes("nutrition grade") ? product.description.match(/Open Food Facts nutrition grade: ([A-E])/i)?.[1] ?? "See pack" : "Refer to the current sealed pack label"}</dd></div>
+                <div><dt>Country of origin</dt><dd>Refer to the current sealed pack label</dd></div>
+                <div><dt>Manufactured by</dt><dd>Refer to the current sealed pack label</dd></div>
+              </dl>
+            </div>
+          </section>
+          <aside className="product-facts-side">
+            <FactCard title="Delivery" items={["Free standard delivery", "Estimated in 2–3 days after PIN-code check", "Express options depend on location"]} />
+            <FactCard title="Returns" items={[product.returnPolicy ?? "Damaged, expired or incorrect items are eligible for support"]} />
+            <FactCard title="Seller information" items={["Sold through Nexora Commerce", "Seller and tax details appear on the final invoice", "Availability remains subject to final order confirmation"]} />
+            <FactCard title="Ratings policy" items={[`${product.rating} from ${product.reviews.toLocaleString("en-IN")} retailer ratings`, "Nexora verified-purchase reviews are kept separate"]} />
           </aside>
         </div>
       ) : (
