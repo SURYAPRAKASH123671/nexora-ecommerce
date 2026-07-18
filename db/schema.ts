@@ -177,6 +177,152 @@ export const catalogProducts = sqliteTable(
   ],
 );
 
+export const mobileBrands = sqliteTable(
+  "mobile_brands",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    officialUrl: text("official_url").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("mobile_brands_name_unique").on(table.name),
+    uniqueIndex("mobile_brands_slug_unique").on(table.slug),
+  ],
+);
+
+export const mobileSeries = sqliteTable(
+  "mobile_series",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    brandId: integer("brand_id").notNull(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    officialUrl: text("official_url"),
+  },
+  (table) => [
+    uniqueIndex("mobile_series_brand_slug_unique").on(table.brandId, table.slug),
+    index("mobile_series_brand_idx").on(table.brandId),
+  ],
+);
+
+export const mobileModels = sqliteTable(
+  "mobile_models",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    brandId: integer("brand_id").notNull(),
+    seriesId: integer("series_id"),
+    externalId: text("external_id").notNull(),
+    officialName: text("official_name").notNull(),
+    slug: text("slug").notNull(),
+    launchDate: text("launch_date"),
+    indiaAvailability: text("india_availability").notNull(),
+    availabilitySourceUrl: text("availability_source_url").notNull(),
+    specificationSourceUrl: text("specification_source_url").notNull(),
+    mediaSourceUrl: text("media_source_url"),
+    verificationStatus: text("verification_status").notNull().default("VERIFIED_REGISTRY"),
+    publishStatus: text("publish_status").notNull().default("DRAFT"),
+    verifiedAt: text("verified_at").notNull(),
+    catalogProductId: integer("catalog_product_id"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("mobile_models_external_unique").on(table.externalId),
+    uniqueIndex("mobile_models_slug_unique").on(table.slug),
+    index("mobile_models_brand_series_idx").on(table.brandId, table.seriesId),
+    index("mobile_models_launch_date_idx").on(table.launchDate),
+    index("mobile_models_publish_idx").on(table.publishStatus),
+  ],
+);
+
+export const mobileModelVariants = sqliteTable(
+  "mobile_model_variants",
+  {
+    id: text("id").primaryKey(),
+    modelId: integer("model_id").notNull(),
+    sku: text("sku"),
+    ram: text("ram"),
+    storage: text("storage"),
+    colour: text("colour"),
+    officialVariantName: text("official_variant_name").notNull(),
+    sourceUrl: text("source_url").notNull(),
+  },
+  (table) => [
+    uniqueIndex("mobile_model_variants_identity_unique").on(table.id),
+    uniqueIndex("mobile_model_variants_sku_unique").on(table.sku),
+    index("mobile_model_variants_model_idx").on(table.modelId),
+  ],
+);
+
+export const mobileModelSpecifications = sqliteTable(
+  "mobile_model_specifications",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    modelId: integer("model_id").notNull(),
+    groupName: text("group_name").notNull(),
+    specKey: text("spec_key").notNull(),
+    specValue: text("spec_value").notNull(),
+    sourceUrl: text("source_url").notNull(),
+  },
+  (table) => [
+    uniqueIndex("mobile_model_specifications_unique").on(table.modelId, table.groupName, table.specKey),
+    index("mobile_model_specifications_model_idx").on(table.modelId),
+  ],
+);
+
+export const mobileModelMedia = sqliteTable(
+  "mobile_model_media",
+  {
+    id: text("id").primaryKey(),
+    modelId: integer("model_id").notNull(),
+    variantId: text("variant_id"),
+    mediaType: text("media_type").notNull(),
+    url: text("url").notNull(),
+    altText: text("alt_text").notNull(),
+    position: integer("position").notNull(),
+    sourceUrl: text("source_url").notNull(),
+  },
+  (table) => [
+    uniqueIndex("mobile_model_media_identity_unique").on(table.id),
+    index("mobile_model_media_model_position_idx").on(table.modelId, table.position),
+  ],
+);
+
+export const mobileImportJobs = sqliteTable(
+  "mobile_import_jobs",
+  {
+    id: text("id").primaryKey(),
+    actorEmail: text("actor_email").notNull(),
+    fileName: text("file_name").notNull(),
+    format: text("format").notNull(),
+    status: text("status").notNull(),
+    totalRows: integer("total_rows").notNull().default(0),
+    insertedRows: integer("inserted_rows").notNull().default(0),
+    updatedRows: integer("updated_rows").notNull().default(0),
+    rejectedRows: integer("rejected_rows").notNull().default(0),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    completedAt: text("completed_at"),
+  },
+  (table) => [index("mobile_import_jobs_created_idx").on(table.createdAt)],
+);
+
+export const mobileImportErrors = sqliteTable(
+  "mobile_import_errors",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    jobId: text("job_id").notNull(),
+    rowNumber: integer("row_number").notNull(),
+    fieldName: text("field_name"),
+    errorCode: text("error_code").notNull(),
+    message: text("message").notNull(),
+    rawRecordJson: text("raw_record_json").notNull(),
+  },
+  (table) => [index("mobile_import_errors_job_idx").on(table.jobId)],
+);
+
 export const productVariants = sqliteTable(
   "product_variants",
   {

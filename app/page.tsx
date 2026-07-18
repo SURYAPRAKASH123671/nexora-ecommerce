@@ -2649,6 +2649,7 @@ function AdminView({
         </div>
       ) : (
         <>
+          <AdminMobileImportPanel />
           <AdminPaymentPanel auth={auth} />
           <AdminQuestionPanel auth={auth} />
         </>
@@ -2804,6 +2805,35 @@ function AdminView({
       </section>
     </section>
   );
+}
+
+function AdminMobileImportPanel() {
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ total: number; inserted: number; updated: number; rejected: number; errors?: Array<{ rowNumber: number; message: string }>; publication?: string } | null>(null);
+  const [error, setError] = useState("");
+
+  async function upload(event: React.FormEvent) {
+    event.preventDefault();
+    if (!file) { setError("Choose a CSV, Excel, or JSON file."); return; }
+    setBusy(true); setError(""); setResult(null);
+    try {
+      const form = new FormData(); form.append("file", file);
+      const response = await fetch("/api/site/admin/mobile-import", { method: "POST", body: form });
+      const body = await response.json() as typeof result & { message?: string };
+      if (!response.ok && response.status !== 207) throw new Error(body?.message || "Import failed.");
+      setResult(body);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Import failed."); }
+    finally { setBusy(false); }
+  }
+
+  return <section className="payment-admin mobile-import-admin">
+    <div className="section-heading"><div><span className="eyebrow">Verified smartphone registry</span><h2>Bulk model import</h2><p>Import up to 10,000 source-backed models per job. CSV, Excel, JSON, and authenticated JSON API requests use the same validation pipeline.</p></div><a className="account-link secondary" href="/api/site/admin/mobile-import">Download template</a></div>
+    <div className="verification-rules"><b>Publication guard</b><span>Every model needs official identity, India availability, specification sources, and a verification date.</span><span>Price, stock, ratings, reviews, offers, and delivery are never generated.</span><span>Successful imports remain Draft until publication checks are complete.</span></div>
+    <form className="mobile-import-form" onSubmit={upload}><label className="upload-drop"><input type="file" accept=".csv,.xlsx,.xls,.json" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><span>{file ? file.name : "Choose catalog file"}</span><small>CSV, XLSX, XLS, or JSON · maximum 20 MB</small></label><button className="primary" type="submit" disabled={busy}>{busy ? "Validating and importing…" : "Validate & import"}</button></form>
+    {error && <p className="form-error" role="alert">{error}</p>}
+    {result && <div className="import-result" role="status"><div><b>{result.total}</b><small>Rows checked</small></div><div><b>{result.inserted}</b><small>Inserted</small></div><div><b>{result.updated}</b><small>Updated</small></div><div><b>{result.rejected}</b><small>Rejected</small></div>{result.publication && <p>{result.publication}</p>}{result.errors?.length ? <details><summary>Review first {result.errors.length} errors</summary><ul>{result.errors.map((item, index) => <li key={`${item.rowNumber}-${index}`}>Row {item.rowNumber}: {item.message}</li>)}</ul></details> : null}</div>}
+  </section>;
 }
 
 function AdminPaymentPanel({ auth }: { auth: AuthSession }) {

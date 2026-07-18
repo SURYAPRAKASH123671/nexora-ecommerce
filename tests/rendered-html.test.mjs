@@ -399,3 +399,19 @@ test("mobile marketplace is filterable, scalable and governed by verified-source
   assert.ok(governance.verifiedCollectionSources.every((source) => source.url.startsWith("https://")));
   assert.match(governance.publicationRule, /only after/i);
 });
+
+test("smartphone bulk imports preserve source provenance and never fabricate commerce data", async () => {
+  const schema = await readFile(new URL("../db/schema.ts", import.meta.url), "utf8");
+  const route = await readFile(new URL("../app/api/site/admin/mobile-import/route.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  for (const table of ["mobile_brands", "mobile_series", "mobile_models", "mobile_model_variants", "mobile_model_specifications", "mobile_model_media", "mobile_import_jobs", "mobile_import_errors"]) assert.match(schema, new RegExp(table));
+  assert.match(route, /10_000/);
+  assert.match(route, /CSV, XLSX, XLS, and JSON/);
+  assert.match(route, /availabilitySourceUrl/);
+  assert.match(route, /specificationSourceUrl/);
+  assert.match(route, /public HTTPS URL/);
+  assert.match(route, /publishStatus.*DRAFT|publish_status.*'DRAFT'/s);
+  assert.doesNotMatch(route, /pricePaise|stockQuantity|ratingTenths|reviewCount/);
+  assert.match(page, /Validate & import/);
+  assert.match(page, /never generated/);
+});
