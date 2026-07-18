@@ -251,6 +251,20 @@ test("premium grocery catalogue uses unique factual records and 1200px local med
   }
 });
 
+test("portfolio grocery inventory enables shopping without presenting supplier stock as live", async () => {
+  const migration = await readFile(
+    new URL("../drizzle/0007_enable_grocery_demo_inventory.sql", import.meta.url),
+    "utf8",
+  );
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(migration, /stock_quantity = 12 \+ \(id % 24\)/);
+  assert.match(migration, /Portfolio demo inventory/);
+  assert.match(migration, /WHERE category_name = 'Grocery'/);
+  assert.match(page, /Demo inventory enabled/);
+  assert.match(page, /Quick add/);
+});
+
 function jpegDimensions(buffer) {
   let offset = 2;
   while (offset < buffer.length) {

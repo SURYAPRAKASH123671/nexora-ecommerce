@@ -969,13 +969,14 @@ export default function Home({
                   <p>
                     Curated India-market products with retailer-sourced pack
                     details, consistent 1200 × 1200 imagery and transparent
-                    availability checks.
+                    portfolio-demo inventory and complete shopping actions.
                   </p>
                 </div>
                 <ul aria-label="Grocery catalogue standards">
                   <li>64 genuine products</li>
                   <li>33 familiar brands</li>
                   <li>Verified pack sizes</li>
+                  <li>Demo inventory enabled</li>
                 </ul>
               </div>
             )}
