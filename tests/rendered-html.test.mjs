@@ -308,8 +308,32 @@ test("public crawler routes and sitemap expose dedicated product and policy page
   assert.match(robots, /Allow: \//);
   assert.match(robots, /Disallow: \/admin/);
   assert.match(sitemap, /\/products\/apple-iphone-16/);
+  assert.match(sitemap, /\/products\/amul-pasteurised-butter-104860/);
   assert.match(sitemap, /\/categories\/grocery/);
-  assert.equal((sitemap.match(/<url>/g) ?? []).length, 99);
+  assert.equal((sitemap.match(/<url>/g) ?? []).length, 163);
+});
+
+test("every product route supports marketplace metadata and grocery deep links", async () => {
+  const route = await readFile(
+    new URL("../app/products/[slug]/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const page = await readFile(new URL("../app/PremiumProductPage.tsx", import.meta.url), "utf8");
+  assert.match(route, /premium-grocery-source\.json/);
+  assert.match(route, /groceryProduct/);
+  assert.match(route, /initialProduct=\{product\}/);
+  for (const feature of [
+    "product-breadcrumb",
+    "Fullscreen",
+    "onPointerMove",
+    "Check delivery PIN",
+    "Frequently asked",
+    "Questions and answers",
+    "Customer reviews",
+    "Share",
+    "Compare",
+    "Buy now",
+  ]) assert.match(page, new RegExp(feature));
 });
 
 test("worker applies production security and private-route crawler headers", async () => {

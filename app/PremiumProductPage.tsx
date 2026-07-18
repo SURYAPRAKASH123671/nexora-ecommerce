@@ -27,6 +27,8 @@ type Props = {
   liked: boolean;
   onBack: () => void;
   onWishlist: (productId: number) => void;
+  compared: boolean;
+  onCompare: (productId: number) => void;
   onAdd: (product: Product, configuration?: ProductConfiguration) => void;
   onBuyNow: (product: Product, configuration?: ProductConfiguration) => void;
   onMessage: (message: string) => void;
@@ -37,6 +39,8 @@ export default function PremiumProductPage({
   liked,
   onBack,
   onWishlist,
+  compared,
+  onCompare,
   onAdd,
   onBuyNow,
   onMessage,
@@ -50,6 +54,7 @@ export default function PremiumProductPage({
   );
   const [mediaIndex, setMediaIndex] = useState(0);
   const [zoomed, setZoomed] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
   const [fullscreen, setFullscreen] = useState(false);
   const [pin, setPin] = useState("560001");
   const [pinDraft, setPinDraft] = useState("560001");
@@ -110,6 +115,25 @@ export default function PremiumProductPage({
     onMessage(`Delivery availability updated for ${pinDraft.trim()}`);
   }
 
+  async function shareProduct() {
+    const url = window.location.href;
+    if (navigator.share) {
+      await navigator.share({ title: product.name, text: product.description, url }).catch(() => undefined);
+      return;
+    }
+    await navigator.clipboard?.writeText(url);
+    onMessage("Product link copied");
+  }
+
+  function moveZoom(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (!zoomed) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    setZoomPosition({
+      x: ((event.clientX - bounds.left) / bounds.width) * 100,
+      y: ((event.clientY - bounds.top) / bounds.height) * 100,
+    });
+  }
+
   async function submitQuestion(event: React.FormEvent) {
     event.preventDefault();
     setQuestionStatus("");
@@ -142,6 +166,11 @@ export default function PremiumProductPage({
 
   return (
     <section className="premium-product-page wrap">
+      <nav className="product-breadcrumb" aria-label="Breadcrumb">
+        <button onClick={onBack}>Shop</button><span>›</span>
+        <button onClick={onBack}>{product.categoryName}</button><span>›</span>
+        <strong aria-current="page">{product.name}</strong>
+      </nav>
       <button className="back-link" onClick={onBack}>
         ← Back to products
       </button>
@@ -162,6 +191,7 @@ export default function PremiumProductPage({
           <button
             className={`premium-main-image ${zoomed ? "is-zoomed" : ""}`}
             onClick={() => setZoomed((value) => !value)}
+            onPointerMove={moveZoom}
             aria-label={zoomed ? "Reset image zoom" : "Zoom product image"}
           >
             <Image
@@ -173,6 +203,7 @@ export default function PremiumProductPage({
               height={1200}
               priority
               sizes="(max-width: 1050px) 100vw, 58vw"
+              style={{ transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%` }}
             />
           </button>
           <div className="premium-thumbnails" aria-label="Product gallery">
@@ -388,6 +419,14 @@ export default function PremiumProductPage({
             >
               {liked ? "♥" : "♡"}
             </button>
+            <button
+              className={`premium-compare ${compared ? "active" : ""}`}
+              onClick={() => onCompare(product.id)}
+              aria-pressed={compared}
+            >
+              {compared ? "✓ Compare" : "+ Compare"}
+            </button>
+            <button className="premium-share" onClick={shareProduct}>Share</button>
           </div>
 
           <div className="truthful-offers">
@@ -517,6 +556,43 @@ export default function PremiumProductPage({
             base item while its manufacturer data is reviewed.
           </p>
         </section>
+      )}
+
+      {!profile && isGrocery && (
+        <>
+          <section className="faq-section marketplace-accordion">
+            <div className="premium-section-heading">
+              <span className="eyebrow">Specifications</span>
+              <h2>Product information</h2>
+            </div>
+            <div className="faq-list">
+              <details open><summary>Highlights and pack details</summary><p>{product.description}</p></details>
+              <details><summary>Delivery and returns</summary><p>{product.shipping}. {product.returnPolicy}</p></details>
+              <details><summary>Manufacturer and origin declarations</summary><p>Refer to the current sealed retail pack for the legally current manufacturer, importer, country-of-origin, ingredient and nutrition declarations.</p></details>
+            </div>
+          </section>
+          <section className="faq-section">
+            <div className="premium-section-heading"><span className="eyebrow">Customer questions</span><h2>Questions and answers</h2></div>
+            <div className="faq-list">
+              {answeredQuestions.map((item) => <details key={item.id}><summary>{item.question}</summary><p>{item.answer}</p></details>)}
+            </div>
+            <form className="ask-question" onSubmit={submitQuestion}>
+              <div><b>Need product help?</b><p>Ask about the pack, delivery, storage or returns. Questions appear after moderation.</p></div>
+              <textarea value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={500} placeholder="Ask a product question" aria-label="Product question" />
+              <button className="primary" type="submit" disabled={questionBusy}>{questionBusy ? "Submitting…" : "Submit question"}</button>
+              {questionStatus && <span role="status">{questionStatus}</span>}
+            </form>
+          </section>
+          <section className="verified-reviews marketplace-reviews">
+            <div>
+              <span className="eyebrow">Customer reviews</span>
+              <h2>{product.rating} ★ retailer rating</h2>
+              <p>{product.reviews.toLocaleString("en-IN")} source ratings. Written Nexora reviews, customer photos and filters appear only after verified Nexora purchases.</p>
+              <label>Filter reviews <select disabled aria-label="Filter customer reviews"><option>All verified reviews</option></select></label>
+            </div>
+            <strong>{product.rating}</strong>
+          </section>
+        </>
       )}
 
       {profile && (

@@ -128,6 +128,7 @@ const sortLabels: Record<SortMode, string> = {
 export type StorefrontInitialProps = {
   initialView?: View;
   initialProductSlug?: string;
+  initialProduct?: Product;
   initialCategory?: string;
   initialInfoPage?: InfoPage;
 };
@@ -135,10 +136,12 @@ export type StorefrontInitialProps = {
 export default function Home({
   initialView = "home",
   initialProductSlug,
+  initialProduct: routedProduct,
   initialCategory = "All",
   initialInfoPage = "help-centre",
 }: StorefrontInitialProps = {}) {
   const initialProduct =
+    routedProduct ??
     fallbackProducts.find((product) => productSlug(product.name) === initialProductSlug) ??
     fallbackProducts[0];
   const [view, setView] = useState<View>(initialView);
@@ -234,7 +237,9 @@ export default function Home({
     document.title =
       view === "information"
         ? `${titles[infoPage]} | Nexora Commerce`
-        : "Nexora — Thoughtfully chosen";
+        : view === "product"
+          ? `${selected.name} | Nexora`
+          : "Nexora — Thoughtfully chosen";
     const description = document.querySelector<HTMLMetaElement>(
       'meta[name="description"]',
     );
@@ -242,8 +247,10 @@ export default function Home({
       description.content =
         view === "information"
           ? `Professional ${titles[infoPage]} information from Nexora Commerce India.`
+          : view === "product"
+            ? selected.description
           : "A premium commerce experience for technology and lifestyle essentials.";
-  }, [view, infoPage]);
+  }, [view, infoPage, selected]);
 
   useEffect(() => {
     try {
@@ -316,7 +323,7 @@ export default function Home({
       .then((data: CatalogResponse) => {
         if (!Array.isArray(data.items)) return;
         setProducts(data.items);
-        if (data.items[0]) setSelected(data.items[0]);
+        if (data.items[0] && !initialProductSlug) setSelected(data.items[0]);
         setCatalogPage(1);
         setCatalogTotal(data.pagination.total);
         setCatalogHasMore(data.pagination.hasMore);
@@ -329,7 +336,7 @@ export default function Home({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query, category, sortMode]);
+  }, [query, category, sortMode, initialProductSlug]);
 
   async function loadMoreProducts() {
     if (loading || !catalogHasMore) return;
@@ -1037,6 +1044,8 @@ export default function Home({
               liked={wishlist.includes(selected.id)}
               onBack={() => navigate("catalog")}
               onWishlist={toggleWishlist}
+              compared={comparisonIds.includes(selected.id)}
+              onCompare={toggleComparison}
               onAdd={addToCart}
               onBuyNow={(product, configuration) => {
                 addToCart(product, configuration);
@@ -1045,10 +1054,10 @@ export default function Home({
               onMessage={showNotice}
             />
             <ProductSection
-              title="Pairs well with"
-              subtitle="Complementary products from the Nexora catalogue"
+              title="Frequently bought together"
+              subtitle="Popular complementary choices from the same department"
               products={products
-                .filter((item) => item.id !== selected.id)
+                .filter((item) => item.id !== selected.id && item.categoryName === selected.categoryName)
                 .slice(0, 4)}
               onOpen={openProduct}
               onAdd={addToCart}
@@ -1057,6 +1066,32 @@ export default function Home({
               loading={false}
               onAll={() => navigate("catalog")}
             />
+            <ProductSection
+              title="Similar products"
+              subtitle="Compare nearby choices before deciding"
+              products={products
+                .filter((item) => item.id !== selected.id && item.categoryName === selected.categoryName)
+                .slice(4, 8)}
+              onOpen={openProduct}
+              onAdd={addToCart}
+              wishlist={wishlist}
+              onWishlist={toggleWishlist}
+              loading={false}
+              onAll={() => navigate("catalog")}
+            />
+            {recentProducts.filter((item) => item.id !== selected.id).length > 0 && (
+              <ProductSection
+                title="Recently viewed"
+                subtitle="Continue exploring products you opened earlier"
+                products={recentProducts.filter((item) => item.id !== selected.id)}
+                onOpen={openProduct}
+                onAdd={addToCart}
+                wishlist={wishlist}
+                onWishlist={toggleWishlist}
+                loading={false}
+                onAll={() => navigate("catalog")}
+              />
+            )}
           </>
         )}
 

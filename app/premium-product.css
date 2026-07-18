@@ -2,6 +2,9 @@
   padding-top: 42px;
   padding-bottom: 88px;
 }
+.product-breadcrumb { display: flex; align-items: center; gap: 8px; overflow: hidden; margin-bottom: 15px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.product-breadcrumb button { border: 0; background: transparent; color: var(--blue); padding: 0; cursor: pointer; }
+.product-breadcrumb strong { overflow: hidden; color: #4b5870; font-weight: 600; text-overflow: ellipsis; }
 
 .premium-product-layout {
   display: grid;
@@ -344,6 +347,12 @@
   grid-template-columns: 1fr 1.35fr 50px;
   gap: 8px;
 }
+.premium-compare, .premium-share { min-height: 46px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: #17213a; font-weight: 750; cursor: pointer; transition: transform .2s ease, border-color .2s ease, background .2s ease; }
+.premium-compare:hover, .premium-share:hover { transform: translateY(-2px); border-color: var(--blue); }
+.premium-compare.active { background: #eef4ff; border-color: var(--blue); color: var(--blue); }
+.marketplace-accordion { margin-top: 58px; }
+.marketplace-reviews label { display: flex; gap: 10px; align-items: center; margin-top: 18px; color: var(--muted); font-size: 10px; }
+.marketplace-reviews select { border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 9px 12px; }
 
 .premium-actions button {
   min-height: 52px;
