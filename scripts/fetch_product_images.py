@@ -1,6 +1,6 @@
 """Fetch product-specific reference images and normalize them for the storefront.
 
-Run with the bundled Codex Python runtime so Pillow is available. The generated
+Run with a Python runtime that provides Pillow. The generated
 manifest records the source URL used for every image.
 """
 

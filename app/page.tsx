@@ -1922,14 +1922,14 @@ function AccountView({
           {auth ? (
             <a
               className="secondary account-link"
-              href="/signout-with-chatgpt?return_to=%2F"
+              href="/auth/sign-out?return_to=%2F"
             >
               Sign out
             </a>
           ) : (
             <a
               className="primary account-link"
-              href="/signin-with-chatgpt?return_to=%2F"
+              href="/auth/sign-in?return_to=%2F"
             >
               Secure sign in
             </a>
@@ -1958,7 +1958,7 @@ function AccountView({
           </div>
           <a
             className="primary account-link"
-            href="/signin-with-chatgpt?return_to=%2F"
+            href="/auth/sign-in?return_to=%2F"
           >
             Continue securely
           </a>
