@@ -491,3 +491,21 @@ test("support system persists protected conversations, files, tickets and agent 
   assert.match(page, /தமிழ்/);
   assert.match(page, /हिन्दी/);
 });
+
+test("Nexora uses first-party password authentication without provider redirects", async () => {
+  const commerce = await readFile(new URL("../lib/site-commerce.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const signIn = await readFile(new URL("../app/auth/sign-in/route.ts", import.meta.url), "utf8");
+  const login = await readFile(new URL("../app/api/site/auth/login/route.ts", import.meta.url), "utf8");
+  const register = await readFile(new URL("../app/api/site/auth/register/route.ts", import.meta.url), "utf8");
+  const migration = await readFile(new URL("../drizzle/0012_nexora_customer_auth.sql", import.meta.url), "utf8");
+  assert.match(commerce, /PBKDF2/);
+  assert.match(commerce, /210_000/);
+  assert.match(commerce, /HttpOnly; Secure; SameSite=Strict/);
+  assert.match(migration, /customer_accounts/);
+  assert.match(migration, /customer_sessions/);
+  assert.match(page, /api\/site\/auth\/\$\{/);
+  assert.match(login, /passwordMatches/);
+  assert.match(register, /passwordHash/);
+  assert.doesNotMatch(signIn, /signin-with-/);
+});

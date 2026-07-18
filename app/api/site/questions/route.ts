@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = requireSiteUser(request);
+    const user = await requireSiteUser(request);
     const payload = (await request.json()) as {
       productId?: number;
       question?: string;

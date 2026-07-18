@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import {
   ArrowRight,
@@ -2035,6 +2035,7 @@ export default function Home({
             wishlistCount={wishlist.length}
             onShop={() => navigate("catalog")}
             onAction={openInfo}
+            onAuthenticated={(user) => setAuth({ user })}
           />
         )}
         {view === "admin" && (
@@ -3742,12 +3743,43 @@ function AccountView({
   wishlistCount,
   onShop,
   onAction,
+  onAuthenticated,
 }: {
   auth: AuthSession | null;
   wishlistCount: number;
   onShop: () => void;
   onAction: (title: string, body: string) => void;
+  onAuthenticated: (user: AuthUser) => void;
 }) {
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState("");
+
+  async function submitAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAuthBusy(true);
+    setAuthError("");
+    const form = new FormData(event.currentTarget);
+    try {
+      const response = await fetch(`/api/site/auth/${authMode === "login" ? "login" : "register"}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: String(form.get("name") ?? ""),
+          email: String(form.get("email") ?? ""),
+          password: String(form.get("password") ?? ""),
+        }),
+      });
+      if (!response.ok) throw new Error(await readApiError(response));
+      const result = (await response.json()) as { user: AuthUser };
+      onAuthenticated(result.user);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Sign in could not be completed.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
   return (
     <section className="account-page wrap">
       <div className="account-hero">
@@ -3770,14 +3802,7 @@ function AccountView({
             >
               Sign out
             </a>
-          ) : (
-            <a
-              className="primary account-link"
-              href="/auth/sign-in?return_to=%2F"
-            >
-              Secure sign in
-            </a>
-          )}
+          ) : null}
         </div>
         <div className="account-avatar">
           {auth
@@ -3793,19 +3818,24 @@ function AccountView({
       {!auth && (
         <div className="auth-form platform-auth">
           <div>
-            <span className="eyebrow">Protected identity</span>
-            <h2>No separate Nexora password</h2>
+            <span className="eyebrow">Nexora account</span>
+            <h2>{authMode === "login" ? "Welcome back" : "Create your account"}</h2>
             <p>
-              Nexora uses a protected account session, so your password is never
-              collected or stored by this storefront.
+              Sign in directly with Nexora to manage orders, checkout, payment
+              verification and customer support.
             </p>
+            <div className="auth-tabs" role="tablist" aria-label="Account access">
+              <button type="button" className={authMode === "login" ? "active" : ""} onClick={() => { setAuthMode("login"); setAuthError(""); }}>Sign in</button>
+              <button type="button" className={authMode === "register" ? "active" : ""} onClick={() => { setAuthMode("register"); setAuthError(""); }}>Create account</button>
+            </div>
           </div>
-          <a
-            className="primary account-link"
-            href="/auth/sign-in?return_to=%2F"
-          >
-            Continue securely
-          </a>
+          <form onSubmit={submitAccount}>
+            {authMode === "register" && <label>Full name<input name="name" autoComplete="name" required minLength={2} maxLength={80} /></label>}
+            <label>Email<input name="email" type="email" autoComplete="email" required /></label>
+            <label>Password<input name="password" type="password" autoComplete={authMode === "login" ? "current-password" : "new-password"} required minLength={10} maxLength={128} /><small>10 or more characters with a letter and number</small></label>
+            {authError && <p className="form-error" role="alert">{authError}</p>}
+            <button className="primary" type="submit" disabled={authBusy}>{authBusy ? "Please wait…" : authMode === "login" ? "Sign in" : "Create account"}</button>
+          </form>
         </div>
       )}
       <div className="account-grid">
@@ -3820,7 +3850,7 @@ function AccountView({
               onAction(
                 "Order privacy",
                 auth
-                  ? "Your authenticated Sites session is connected. Checkout creates durable orders under this identity."
+                  ? "Your Nexora account is connected. Checkout creates durable orders under this identity."
                   : "Sign in first to access private order history.",
               )
             }

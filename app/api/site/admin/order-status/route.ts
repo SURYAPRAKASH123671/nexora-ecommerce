@@ -14,7 +14,7 @@ const nextStatus: Record<string, string> = {
 
 export async function PATCH(request: Request) {
   try {
-    const admin = requireAdmin(request);
+    const admin = await requireAdmin(request);
     const payload = (await request.json()) as {
       orderNumber?: string;
       status?: string;

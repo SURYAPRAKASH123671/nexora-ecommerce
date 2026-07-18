@@ -4,8 +4,6 @@ function safeReturnTo(request: Request) {
 }
 
 export function GET(request: Request) {
-  const providerRoute = ["chat", "gpt"].join("");
-  const destination = new URL(`/signin-with-${providerRoute}`, request.url);
-  destination.searchParams.set("return_to", safeReturnTo(request));
-  return Response.redirect(destination, 302);
+  const destination = `/account?return_to=${encodeURIComponent(safeReturnTo(request))}`;
+  return new Response(null, { status: 302, headers: { Location: destination } });
 }

@@ -2,7 +2,7 @@ import { commerceEnv, errorResponse, HttpError, requireSiteUser } from "@/lib/si
 
 export async function GET(request: Request) {
   try {
-    const user = requireSiteUser(request); const id = new URL(request.url).searchParams.get("conversationId");
+    const user = await requireSiteUser(request); const id = new URL(request.url).searchParams.get("conversationId");
     if (!id) throw new HttpError(400, "conversationId is required.");
     const { DB } = commerceEnv(); await own(DB, id, user.email);
     const rows = await DB.prepare("SELECT id, sender_role, sender_email, body, message_type, delivery_status, read_at, created_at FROM support_messages WHERE conversation_id=? ORDER BY created_at ASC LIMIT 500").bind(id).all();
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = requireSiteUser(request); const body = await request.json() as { conversationId?: string; message?: string };
+    const user = await requireSiteUser(request); const body = await request.json() as { conversationId?: string; message?: string };
     const id = body.conversationId?.trim(); const message = body.message?.trim().replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 4000);
     if (!id || !message) throw new HttpError(400, "Conversation and message are required.");
     const { DB } = commerceEnv(); await own(DB, id, user.email);

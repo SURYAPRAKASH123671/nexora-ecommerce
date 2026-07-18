@@ -85,6 +85,13 @@
       "when": 1784367488879,
       "tag": "0011_mature_wither",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1784378700000,
+      "tag": "0012_nexora_customer_auth",
+      "breakpoints": true
     }
   ]
 }

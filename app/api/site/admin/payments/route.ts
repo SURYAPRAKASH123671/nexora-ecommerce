@@ -22,7 +22,7 @@ type PaymentRow = {
 
 export async function GET(request: Request) {
   try {
-    requireAdmin(request);
+    await requireAdmin(request);
     const status = new URL(request.url).searchParams.get("status");
     const allowed = ["PENDING_VERIFICATION", "VERIFIED", "REJECTED"];
     if (status && status !== "ALL" && !allowed.includes(status))

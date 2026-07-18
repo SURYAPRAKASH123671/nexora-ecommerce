@@ -7,6 +7,29 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+export const customerAccounts = sqliteTable("customer_accounts", {
+  email: text("email").primaryKey(),
+  displayName: text("display_name").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  passwordSalt: text("password_salt").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const customerSessions = sqliteTable(
+  "customer_sessions",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    customerEmail: text("customer_email").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("customer_sessions_email_idx").on(table.customerEmail),
+    index("customer_sessions_expiry_idx").on(table.expiresAt),
+  ],
+);
+
 export const orders = sqliteTable(
   "orders",
   {

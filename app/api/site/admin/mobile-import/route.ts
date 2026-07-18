@@ -15,7 +15,7 @@ type MobileRow = {
 
 export async function GET(request: Request) {
   try {
-    requireAdmin(request);
+    await requireAdmin(request);
     const template = [
       "externalId,officialName,brand,brandOfficialUrl,series,seriesOfficialUrl,launchDate,indiaAvailability,availabilitySourceUrl,specificationSourceUrl,mediaSourceUrl,verifiedAt,variants,specifications,media",
     ].join("\n");
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const admin = requireAdmin(request);
+    const admin = await requireAdmin(request);
     const { records, fileName, format } = await readRecords(request);
     if (!records.length) throw new HttpError(400, "The import contains no records.");
     if (records.length > 10_000) throw new HttpError(400, "Import a maximum of 10,000 models per job.");

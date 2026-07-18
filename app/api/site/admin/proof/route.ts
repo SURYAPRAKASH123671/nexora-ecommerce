@@ -7,7 +7,7 @@ import {
 
 export async function GET(request: Request) {
   try {
-    requireAdmin(request);
+    await requireAdmin(request);
     const paymentId = Number(
       new URL(request.url).searchParams.get("paymentId"),
     );

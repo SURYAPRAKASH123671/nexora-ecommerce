@@ -2,7 +2,7 @@ import { commerceEnv, errorResponse, HttpError, requireAdmin } from "@/lib/site-
 
 export async function GET(request: Request) {
   try {
-    requireAdmin(request); const { DB } = commerceEnv(); const id = new URL(request.url).searchParams.get("conversationId");
+    await requireAdmin(request); const { DB } = commerceEnv(); const id = new URL(request.url).searchParams.get("conversationId");
     if (id) {
       const conversation = await DB.prepare("SELECT c.*, t.id ticket_id, t.subject, t.priority, t.order_number FROM support_conversations c LEFT JOIN support_tickets t ON t.conversation_id=c.id WHERE c.id=?").bind(id).first();
       if (!conversation) throw new HttpError(404, "Conversation not found.");
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const admin = requireAdmin(request); const body = await request.json() as { conversationId?: string; action?: string; message?: string; note?: string; status?: string };
+    const admin = await requireAdmin(request); const body = await request.json() as { conversationId?: string; action?: string; message?: string; note?: string; status?: string };
     const id = body.conversationId?.trim(); if (!id) throw new HttpError(400, "conversationId is required.");
     const { DB } = commerceEnv(); const exists = await DB.prepare("SELECT id FROM support_conversations WHERE id=?").bind(id).first(); if (!exists) throw new HttpError(404, "Conversation not found.");
     const now = new Date().toISOString();

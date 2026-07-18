@@ -33,7 +33,7 @@ type ImportRow = Record<(typeof fields)[number], string>;
 
 export async function GET(request: Request) {
   try {
-    requireAdmin(request);
+    await requireAdmin(request);
     const { DB } = commerceEnv();
     const rows = await DB.prepare(
       "SELECT sku, name, brand, model, official_description, category_name, subcategory_name, price_paise, previous_price_paise, stock_quantity, image_url, source_url, rating_tenths, review_count, colour, size, new_arrival, best_seller, warranty_text, shipping_text, return_policy_text FROM catalog_products ORDER BY id",
@@ -83,7 +83,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const admin = requireAdmin(request);
+    const admin = await requireAdmin(request);
     const text = await request.text();
     if (text.length > 5_000_000) throw new HttpError(413, "Import file is too large.");
     const rows = parseCsv(text);
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    requireAdmin(request);
+    await requireAdmin(request);
     const sku = new URL(request.url).searchParams.get("sku")?.trim();
     if (!sku) throw new HttpError(400, "SKU is required.");
     const { DB } = commerceEnv();

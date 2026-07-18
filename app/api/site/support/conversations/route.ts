@@ -5,7 +5,7 @@ const intents = new Set(["GENERAL", "PRODUCT", "ORDER", "RETURN", "REFUND", "WAR
 
 export async function GET(request: Request) {
   try {
-    const user = requireSiteUser(request);
+    const user = await requireSiteUser(request);
     const { DB } = commerceEnv();
     const rows = await DB.prepare("SELECT id, language, status, intent, assigned_agent_email, summary, last_message_at, created_at FROM support_conversations WHERE customer_email=? ORDER BY last_message_at DESC LIMIT 50")
       .bind(user.email).all();
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = requireSiteUser(request);
+    const user = await requireSiteUser(request);
     const body = await request.json() as { language?: string; intent?: string; subject?: string; orderNumber?: string };
     const language = languages.has(body.language ?? "") ? body.language! : "en";
     const intent = intents.has(body.intent ?? "") ? body.intent! : "GENERAL";

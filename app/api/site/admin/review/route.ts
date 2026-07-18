@@ -15,7 +15,7 @@ type PaymentRow = {
 
 export async function PATCH(request: Request) {
   try {
-    const admin = requireAdmin(request);
+    const admin = await requireAdmin(request);
     const payload = (await request.json()) as {
       paymentId?: number;
       decision?: "APPROVE" | "REJECT";

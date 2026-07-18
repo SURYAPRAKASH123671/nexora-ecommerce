@@ -3,7 +3,7 @@ import { commerceEnv, errorResponse, HttpError, requireSiteUser, safeFileName } 
 const MAX = 8 * 1024 * 1024;
 export async function POST(request: Request) {
   try {
-    const user = requireSiteUser(request); const form = await request.formData(); const conversationId = String(form.get("conversationId") ?? ""); const file = form.get("file");
+    const user = await requireSiteUser(request); const form = await request.formData(); const conversationId = String(form.get("conversationId") ?? ""); const file = form.get("file");
     if (!(file instanceof File) || !conversationId) throw new HttpError(400, "Conversation and file are required.");
     const { DB, PAYMENT_PROOFS } = commerceEnv(); const own = await DB.prepare("SELECT id FROM support_conversations WHERE id=? AND customer_email=?").bind(conversationId, user.email).first(); if (!own) throw new HttpError(404, "Conversation not found.");
     if (!file.size || file.size > MAX) throw new HttpError(400, "Attachments must be between 1 byte and 8 MB.");
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const user = requireSiteUser(request); const id = new URL(request.url).searchParams.get("id"); if (!id) throw new HttpError(400, "Attachment id is required.");
+    const user = await requireSiteUser(request); const id = new URL(request.url).searchParams.get("id"); if (!id) throw new HttpError(400, "Attachment id is required.");
     const { DB, PAYMENT_PROOFS } = commerceEnv(); const attachment = await DB.prepare("SELECT object_key, original_name, content_type, customer_email FROM support_attachments WHERE id=?").bind(id).first<Record<string,string>>();
     if (!attachment || (attachment.customer_email !== user.email && !user.isAdmin)) throw new HttpError(404, "Attachment not found.");
     const object = await PAYMENT_PROOFS.get(attachment.object_key); if (!object) throw new HttpError(404, "Attachment content not found.");

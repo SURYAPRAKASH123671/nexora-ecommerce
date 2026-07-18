@@ -32,7 +32,7 @@ type CheckoutPayload = {
 
 export async function POST(request: Request) {
   try {
-    const user = requireSiteUser(request);
+    const user = await requireSiteUser(request);
     const payload = (await request.json()) as CheckoutPayload;
     const address = payload.deliveryAddress;
     if (

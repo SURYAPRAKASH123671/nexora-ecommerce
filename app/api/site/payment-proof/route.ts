@@ -19,7 +19,7 @@ type OrderRow = {
 
 export async function POST(request: Request) {
   try {
-    const user = requireSiteUser(request);
+    const user = await requireSiteUser(request);
     const form = await request.formData();
     const orderNumber = String(form.get("orderNumber") ?? "");
     const payerReference =

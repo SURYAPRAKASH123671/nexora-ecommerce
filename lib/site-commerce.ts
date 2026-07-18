@@ -43,19 +43,20 @@ export function razorpayEnv(): Required<
   };
 }
 
-export function requireSiteUser(request: Request): SiteUser {
-  const email = request.headers
-    .get("oai-authenticated-user-email")
-    ?.trim()
-    .toLowerCase();
-  if (!email) throw new HttpError(401, "Sign in securely to continue.");
-  const encodedName = request.headers.get("oai-authenticated-user-full-name");
-  const name =
-    encodedName &&
-    request.headers.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? (safeDecode(encodedName) ?? email)
-      : email;
+export async function requireSiteUser(request: Request): Promise<SiteUser> {
+  const token = readCookie(request, "nexora_session");
+  if (!token) throw new HttpError(401, "Sign in securely to continue.");
+  const tokenHash = await sha256(token);
+  const record = await commerceEnv().DB.prepare(
+    `SELECT u.email, u.display_name AS name
+       FROM customer_sessions s
+       JOIN customer_accounts u ON u.email = s.customer_email
+      WHERE s.token_hash = ?1 AND s.expires_at > CURRENT_TIMESTAMP
+      LIMIT 1`,
+  ).bind(tokenHash).first<{ email: string; name: string }>();
+  if (!record) throw new HttpError(401, "Your session has expired. Sign in again.");
+  const email = record.email.toLowerCase();
+  const name = record.name;
   const configuredAdmins = (
     commerceEnv().NEXORA_ADMIN_EMAILS ?? "kssuryaprakash2@gmail.com"
   )
@@ -65,10 +66,101 @@ export function requireSiteUser(request: Request): SiteUser {
   return { email, name, isAdmin: configuredAdmins.includes(email) };
 }
 
-export function requireAdmin(request: Request): SiteUser {
-  const user = requireSiteUser(request);
+export async function requireAdmin(request: Request): Promise<SiteUser> {
+  const user = await requireSiteUser(request);
   if (!user.isAdmin) throw new HttpError(403, "Administrator access required.");
   return user;
+}
+
+export function assertSameOrigin(request: Request): void {
+  const origin = request.headers.get("origin");
+  const allowedOrigins = new Set([
+    new URL(request.url).origin,
+    "https://nexora-web-virid.vercel.app",
+  ]);
+  if (origin && !allowedOrigins.has(origin))
+    throw new HttpError(403, "Request origin was rejected.");
+}
+
+export function normalizeEmail(value: string): string {
+  const email = value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254)
+    throw new HttpError(400, "Enter a valid email address.");
+  return email;
+}
+
+export function validatePassword(value: string): void {
+  if (value.length < 10 || value.length > 128 || !/[A-Za-z]/.test(value) || !/\d/.test(value))
+    throw new HttpError(400, "Use 10-128 characters with at least one letter and one number.");
+}
+
+export async function passwordHash(password: string, salt = randomToken(16)): Promise<{ hash: string; salt: string }> {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: fromBase64Url(salt), iterations: 210_000 }, key, 256);
+  return { hash: toBase64Url(new Uint8Array(bits)), salt };
+}
+
+export async function passwordMatches(password: string, salt: string, expected: string): Promise<boolean> {
+  const { hash } = await passwordHash(password, salt);
+  return timingSafeEqual(hash, expected);
+}
+
+export async function createCustomerSession(email: string): Promise<{ token: string; expiresAt: string }> {
+  const token = randomToken(32);
+  const tokenHash = await sha256(token);
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  await commerceEnv().DB.prepare(
+    "INSERT INTO customer_sessions (token_hash, customer_email, expires_at) VALUES (?1, ?2, ?3)",
+  ).bind(tokenHash, email, expiresAt).run();
+  return { token, expiresAt };
+}
+
+export function sessionCookie(token: string, expiresAt: string): string {
+  return `nexora_session=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Expires=${new Date(expiresAt).toUTCString()}`;
+}
+
+export function clearSessionCookie(): string {
+  return "nexora_session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0";
+}
+
+export async function revokeCustomerSession(request: Request): Promise<void> {
+  const token = readCookie(request, "nexora_session");
+  if (token) await commerceEnv().DB.prepare("DELETE FROM customer_sessions WHERE token_hash = ?1").bind(await sha256(token)).run();
+}
+
+function readCookie(request: Request, name: string): string | null {
+  for (const part of (request.headers.get("cookie") ?? "").split(";")) {
+    const [key, ...rest] = part.trim().split("=");
+    if (key === name) return rest.join("=");
+  }
+  return null;
+}
+
+function randomToken(bytes: number): string {
+  const value = new Uint8Array(bytes);
+  crypto.getRandomValues(value);
+  return toBase64Url(value);
+}
+
+async function sha256(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return toBase64Url(new Uint8Array(digest));
+}
+
+function toBase64Url(value: Uint8Array): string {
+  return btoa(String.fromCharCode(...value)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+}
+
+function fromBase64Url(value: string): Uint8Array {
+  const base64 = value.replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+  return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+}
+
+function timingSafeEqual(left: string, right: string): boolean {
+  if (left.length !== right.length) return false;
+  let result = 0;
+  for (let index = 0; index < left.length; index += 1) result |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  return result === 0;
 }
 
 export function errorResponse(error: unknown): Response {
@@ -166,13 +258,5 @@ export class HttpError extends Error {
     message: string,
   ) {
     super(message);
-  }
-}
-
-function safeDecode(value: string): string | null {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return null;
   }
 }

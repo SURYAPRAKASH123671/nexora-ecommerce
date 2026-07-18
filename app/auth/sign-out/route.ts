@@ -3,9 +3,8 @@ function safeReturnTo(request: Request) {
   return value.startsWith("/") && !value.startsWith("//") ? value : "/";
 }
 
-export function GET(request: Request) {
-  const providerRoute = ["chat", "gpt"].join("");
-  const destination = new URL(`/signout-with-${providerRoute}`, request.url);
-  destination.searchParams.set("return_to", safeReturnTo(request));
-  return Response.redirect(destination, 302);
+export async function GET(request: Request) {
+  await revokeCustomerSession(request);
+  return new Response(null, { status: 302, headers: { Location: safeReturnTo(request), "Set-Cookie": clearSessionCookie() } });
 }
+import { clearSessionCookie, revokeCustomerSession } from "@/lib/site-commerce";

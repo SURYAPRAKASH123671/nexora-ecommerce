@@ -7,7 +7,7 @@ import {
 
 export async function POST(request: Request) {
   try {
-    const user = requireSiteUser(request);
+    const user = await requireSiteUser(request);
     const body = (await request.json()) as { orderNumber?: string };
     if (!body.orderNumber) throw new HttpError(400, "Order number is required.");
     const { DB } = commerceEnv();

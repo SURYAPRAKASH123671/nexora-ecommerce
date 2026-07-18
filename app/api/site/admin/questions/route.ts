@@ -20,7 +20,7 @@ type QuestionRow = {
 
 export async function GET(request: Request) {
   try {
-    requireAdmin(request);
+    await requireAdmin(request);
     const status = new URL(request.url).searchParams.get("status") ?? "PENDING";
     if (!["PENDING", "ANSWERED", "ALL"].includes(status))
       throw new HttpError(400, "Unsupported question status.");
@@ -58,7 +58,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const admin = requireAdmin(request);
+    const admin = await requireAdmin(request);
     const payload = (await request.json()) as { id?: number; answer?: string };
     const id = Number(payload.id);
     const answer = payload.answer?.trim() ?? "";

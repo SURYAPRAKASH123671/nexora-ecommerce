@@ -18,7 +18,7 @@ type VerifyPayload = {
 
 export async function POST(request: Request) {
   try {
-    const user = requireSiteUser(request);
+    const user = await requireSiteUser(request);
     const body = (await request.json()) as VerifyPayload;
     if (
       !body.orderNumber ||
