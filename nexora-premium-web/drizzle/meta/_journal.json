@@ -1,0 +1,90 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1784294960017,
+      "tag": "0000_careless_mariko_yashida",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784296955897,
+      "tag": "0001_careful_living_tribunal",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784301003486,
+      "tag": "0002_fix_catalog_media_paths",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1784349989862,
+      "tag": "0003_closed_katie_power",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1784351640668,
+      "tag": "0004_closed_gamma_corps",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1784368800000,
+      "tag": "0005_open_prices_india_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1784372400000,
+      "tag": "0006_premium_grocery_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1784374200000,
+      "tag": "0007_enable_grocery_demo_inventory",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1784376000000,
+      "tag": "0008_polish_grocery_delivery_copy",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1784361488839,
+      "tag": "0009_warm_blue_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1784361679734,
+      "tag": "0010_black_inhumans",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1784367488879,
+      "tag": "0011_mature_wither",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Nexora Commerce",
+  "short_name": "Nexora",
+  "description": "Thoughtfully chosen technology and lifestyle essentials.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#165dff",
+  "icons": [
+    { "src": "/og.png", "sizes": "any", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,107 @@
+.catalog-load-more {
+  grid-column: 1 / -1;
+  width: min(320px, 100%);
+  justify-self: center;
+  margin: 24px auto 8px;
+}
+
+.grocery-collection-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  margin: 24px 0;
+  padding: 30px 34px;
+  border: 1px solid #dce8d7;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #f5faf3 0%, #fffaf0 100%);
+  box-shadow: 0 18px 45px rgba(35, 69, 40, 0.08);
+}
+.grocery-collection-banner h2 { margin: 7px 0 8px; font-size: clamp(1.45rem, 2.2vw, 2.1rem); }
+.grocery-collection-banner p { max-width: 680px; margin: 0; color: #53645a; line-height: 1.6; }
+.grocery-collection-banner ul { display: grid; gap: 8px; min-width: 190px; margin: 0; padding: 0; list-style: none; color: #244b2b; font-weight: 700; }
+.grocery-collection-banner li::before { content: "✓"; margin-right: 9px; color: #15803d; }
+
+.grocery-card {
+  overflow: hidden;
+  border: 1px solid #e6e9e3;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 10px 32px rgba(21, 43, 26, 0.07);
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+.grocery-card:hover { transform: translateY(-5px); border-color: #cadbc6; box-shadow: 0 20px 46px rgba(21, 43, 26, 0.14); }
+.grocery-card .product-image { aspect-ratio: 1; min-height: 0; background: #fff; }
+.grocery-card .product-image img { width: 100%; height: 100%; object-fit: contain; transition: transform .35s ease; }
+.grocery-card:hover .product-image img { transform: scale(1.025); }
+.grocery-card .product-meta { display: flex; flex-direction: column; min-height: 390px; padding: 18px; }
+.grocery-brand { margin: 5px 0 4px; color: #22713a; font-size: .73rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.grocery-size { margin-top: 5px; color: #68756c; font-size: .86rem; }
+.grocery-delivery { margin: 9px 0 12px; color: #315a38; font-size: .78rem; line-height: 1.4; }
+.grocery-quick-actions { display: grid; grid-template-columns: .8fr 1.15fr .65fr; gap: 8px; margin-top: auto; padding-top: 13px; }
+.grocery-quick-actions button { min-height: 42px; border-radius: 12px; font-weight: 750; transition: transform .18s ease, background .18s ease; }
+.grocery-quick-actions button:hover { transform: translateY(-1px); }
+.quick-view { border: 1px solid #d6ddd3; background: #fff; color: #243329; }
+.quick-add { border: 1px solid #173d24; background: #173d24; color: #fff; }
+.quick-share { border: 1px solid #d6ddd3; background: #f7f9f6; color: #243329; }
+.grocery-badge-rail { position: absolute; z-index: 2; top: 16px; left: 16px; display: flex; flex-wrap: wrap; gap: 6px; }
+.grocery-badge-rail > span { position: static !important; padding: 7px 10px; border-radius: 999px; background: #fff; color: #173d24; box-shadow: 0 4px 14px rgba(20,45,27,.12); font-size: .67rem; font-weight: 800; }
+.grocery-savings { display: flex; flex-wrap: wrap; gap: 5px 10px; align-items: baseline; margin-top: 8px; color: #556259; font-size: .76rem; }
+.grocery-savings b { color: #b42318; }
+.grocery-savings small { flex-basis: 100%; color: #778079; }
+.grocery-stock-row { display: flex; flex-direction: column; gap: 3px; margin-top: 10px; font-size: .76rem; }
+.grocery-stock-row b { color: #16803a; }
+.grocery-stock-row span { color: #526058; }
+.grocery-card .product-image > button.liked { color: #d52545; animation: grocery-heart-pop .3s ease; }
+@keyframes grocery-heart-pop { 50% { transform: scale(1.2); } }
+.grocery-marketplace { margin-top: 78px; margin-bottom: 76px; padding: 34px; border: 1px solid #e2e8df; border-radius: 28px; background: linear-gradient(180deg, #fbfdf9, #fff); box-shadow: 0 24px 65px rgba(28, 61, 34, .08); }
+.grocery-marketplace .section-title { margin-top: 0; }
+.grocery-discovery-tabs { display: flex; gap: 8px; overflow-x: auto; margin: 24px -4px 16px; padding: 4px 4px 10px; scrollbar-width: thin; }
+.grocery-discovery-tabs button { flex: 0 0 auto; border: 1px solid #dbe4d8; border-radius: 999px; background: #fff; color: #435048; padding: 10px 15px; font-size: .78rem; font-weight: 700; cursor: pointer; transition: background .2s ease, color .2s ease, transform .2s ease; }
+.grocery-discovery-tabs button:hover { transform: translateY(-1px); }
+.grocery-discovery-tabs button.active { border-color: #173d24; background: #173d24; color: #fff; }
+.grocery-brand-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.grocery-brand-strip button { border: 0; border-radius: 9px; background: #edf5ea; color: #285332; padding: 7px 11px; font-size: .7rem; font-weight: 800; cursor: pointer; }
+.grocery-marketplace-grid .grocery-card { animation: grocery-card-in .35s ease both; }
+@keyframes grocery-card-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 760px) {
+  .grocery-collection-banner { align-items: flex-start; flex-direction: column; padding: 24px; }
+  .grocery-collection-banner ul { grid-template-columns: 1fr 1fr; width: 100%; font-size: .85rem; }
+  .grocery-card .product-meta { min-height: 260px; padding: 14px; }
+  .grocery-quick-actions { grid-template-columns: 1fr; }
+  .grocery-marketplace { margin-top: 48px; padding: 20px 14px; border-radius: 20px; }
+  .grocery-marketplace-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.mobile-marketplace-toolbar { margin: 24px 0 30px; overflow: hidden; border: 1px solid #dfe5ef; border-radius: 24px; background: #fff; box-shadow: 0 18px 48px rgba(28,45,82,.08); }
+.mobile-marketplace-hero { display: flex; align-items: center; justify-content: space-between; gap: 30px; padding: 28px 30px; background: linear-gradient(130deg,#f0f5ff,#fbfcff 65%,#eef3ff); }
+.mobile-marketplace-hero h2 { margin: 7px 0 6px; font-size: clamp(1.5rem,2.4vw,2.25rem); letter-spacing: -.04em; }
+.mobile-marketplace-hero p { max-width: 650px; margin: 0; color: #63708a; line-height: 1.55; }
+.mobile-marketplace-metrics { display: grid; grid-template-columns: repeat(3,minmax(92px,1fr)); gap: 8px; min-width: 390px; }
+.mobile-marketplace-metrics span { display: flex; min-height: 78px; flex-direction: column; justify-content: center; border: 1px solid rgba(124,151,207,.22); border-radius: 14px; background: rgba(255,255,255,.78); color: #61708c; padding: 12px; font-size: .68rem; }
+.mobile-marketplace-metrics b { color: #17213a; font-size: 1.25rem; }
+.mobile-filter-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; padding: 20px 30px 14px; }
+.mobile-filter-grid label { color: #59647a; font-size: .72rem; font-weight: 750; }
+.mobile-filter-grid select { width: 100%; display: block; margin-top: 7px; border: 1px solid #dce3ef; border-radius: 11px; background: #fff; color: #17213a; padding: 10px 12px; }
+.mobile-capability-strip { display: flex; gap: 8px; overflow-x: auto; padding: 0 30px 20px; scrollbar-width: thin; }
+.mobile-capability-strip span { flex: 0 0 auto; border-radius: 999px; background: #eef4ff; color: #315ba9; padding: 7px 10px; font-size: .67rem; font-weight: 750; }
+.mobile-product-card { overflow: hidden; border: 1px solid #e2e7f0; border-radius: 21px; background: #fff; box-shadow: 0 8px 28px rgba(28,45,82,.07); }
+.mobile-product-card .product-image { border-radius: 0; background: #fff; }
+.mobile-product-card .product-image img { object-fit: contain; padding: 12px; }
+.mobile-product-card .product-meta { display: flex; min-height: 350px; flex-direction: column; padding: 18px; }
+.mobile-commerce-details { display: grid; gap: 5px; margin: 11px 0; color: #5f6c83; font-size: .72rem; line-height: 1.35; }
+.mobile-commerce-details b { color: #224f99; }
+.mobile-card-actions { display: grid; grid-template-columns: .8fr 1.1fr .65fr; gap: 7px; margin-top: auto; padding-top: 12px; }
+.mobile-card-actions button { min-height: 42px; border-radius: 11px; font-size: .72rem; font-weight: 750; }
+@media(max-width:900px) {
+  .mobile-marketplace-hero { align-items: flex-start; flex-direction: column; }
+  .mobile-marketplace-metrics { width: 100%; min-width: 0; }
+}
+@media(max-width:600px) {
+  .mobile-marketplace-hero { padding: 22px 18px; }
+  .mobile-marketplace-metrics { grid-template-columns: 1fr; }
+  .mobile-marketplace-metrics span { min-height: 58px; }
+  .mobile-filter-grid { grid-template-columns: 1fr; padding: 18px; }
+  .mobile-capability-strip { padding: 0 18px 18px; }
+  .mobile-card-actions { grid-template-columns: 1fr; }
+}

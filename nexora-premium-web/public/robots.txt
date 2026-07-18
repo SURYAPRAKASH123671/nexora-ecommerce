@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /account
+Disallow: /checkout
+Sitemap: https://nexora-commerce-surya.kssuryaprakash2.chatgpt.site/sitemap.xml
