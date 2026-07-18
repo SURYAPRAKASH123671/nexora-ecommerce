@@ -1454,81 +1454,72 @@ export default function Home({
         {view === "home" && (
           <>
             <section className="hero wrap">
+              <nav className="hero-product-nav" aria-label="Featured product navigation">
+                <div>
+                  <b>Nexora Edit</b>
+                  <button className="active" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Overview</button>
+                  <button onClick={() => openProduct(currentHero)}>Tech specs</button>
+                  <button onClick={() => toggleComparison(currentHero.id)}>Compare</button>
+                </div>
+                <div>
+                  <span>From {money.format(currentHero.price)}</span>
+                  <button className="hero-buy" onClick={() => addToCart(currentHero)}>Buy</button>
+                </div>
+              </nav>
               <div className="hero-copy">
-                <span className="eyebrow">Designed for everyday wonder</span>
+                <span className="eyebrow">Featured by Nexora</span>
                 <h1>
-                  Good things,
+                  Do remarkable things,
                   <br />
-                  <span>thoughtfully chosen.</span>
+                  <span>every day.</span>
                 </h1>
                 <p>
-                  Discover technology and lifestyle essentials selected for
-                  quality, usefulness and lasting value.
+                  {currentHero.name}. {currentHero.description}
                 </p>
                 <div className="hero-actions">
                   <button
                     className="primary"
-                    onClick={() => navigate("catalog")}
+                    onClick={() => openProduct(currentHero)}
                   >
-                    Explore the collection
+                    Explore product
                   </button>
                   <button
                     className="secondary"
-                    onClick={() => openProduct(currentHero)}
+                    onClick={() => addToCart(currentHero)}
                   >
-                    See today&apos;s pick <span aria-hidden="true">→</span>
+                    Add to bag <span aria-hidden="true">→</span>
                   </button>
                 </div>
-                <div className="hero-proof">
-                  <span>
-                    <b>4.8</b> customer rating
-                  </span>
-                  <span>
-                    <b>2-day</b> priority delivery
-                  </span>
-                  <span>
-                    <b>30-day</b> easy returns
-                  </span>
-                </div>
+                <nav className="hero-colour-controls" aria-label="Choose featured product">
+                  {[0, 1, 2, 3].map((index) => (
+                    <button
+                      key={index}
+                      className={`hero-colour swatch-${index}${heroIndex === index ? " active" : ""}`}
+                      onClick={() => setHeroIndex(index)}
+                      aria-label={`Show ${products[index]?.name ?? `featured product ${index + 1}`}`}
+                      aria-pressed={heroIndex === index}
+                    />
+                  ))}
+                </nav>
               </div>
               <div
                 className="hero-visual"
                 aria-label="Featured Nexora products"
               >
-                <div className="orb orb-one" />
-                <div className="orb orb-two" />
-                <div className="hero-card hero-card-main">
-                  <span>Editor&apos;s choice</span>
-                  <Image
-                    src={currentHero.imageUrl}
-                    unoptimized
-                    alt={currentHero.name}
-                    width={700}
-                    height={700}
-                    priority
-                  />
-                  <div>
-                    <b>{currentHero.name}</b>
-                    <small>{money.format(currentHero.price)}</small>
-                  </div>
-                  <nav className="hero-dots" aria-label="Featured products">
-                    {[0, 1, 2, 3].map((index) => (
-                      <button
-                        key={index}
-                        className={heroIndex === index ? "active" : ""}
-                        onClick={() => setHeroIndex(index)}
-                        aria-label={`Show featured product ${index + 1}`}
-                      />
-                    ))}
-                  </nav>
-                </div>
-                <div className="hero-card hero-card-small">
-                  <span>Free delivery</span>
-                  <b>Above ₹5,000</b>
-                </div>
-                <div className="hero-card hero-card-rating">
-                  <b>4.8 ★</b>
-                  <span>Loved by thousands</span>
+                <Image
+                  key={currentHero.id}
+                  className="hero-product-render"
+                  src={currentHero.imageUrl}
+                  unoptimized
+                  alt={currentHero.name}
+                  width={1100}
+                  height={1100}
+                  priority
+                />
+                <div className="hero-gallery-controls">
+                  <span>{heroIndex + 1} / 4</span>
+                  <button onClick={() => setHeroIndex((heroIndex + 3) % 4)} aria-label="Previous featured product">←</button>
+                  <button onClick={() => setHeroIndex((heroIndex + 1) % 4)} aria-label="Next featured product">→</button>
                 </div>
               </div>
             </section>

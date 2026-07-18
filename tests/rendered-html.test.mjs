@@ -442,6 +442,15 @@ test("premium product gallery supports fluid keyboard and swipe navigation", asy
   assert.match(styles, /will-change: transform, opacity/);
 });
 
+test("featured hero uses Nexora-owned editorial product controls and motion", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/reference-hero.css", import.meta.url), "utf8");
+  for (const control of ["hero-product-nav", "hero-colour-controls", "hero-gallery-controls", "Previous featured product", "Next featured product"]) assert.match(page, new RegExp(control));
+  assert.match(styles, /nexora-product-enter/);
+  assert.match(styles, /will-change: transform,opacity/);
+  assert.match(styles, /prefers-reduced-motion/);
+});
+
 test("Nexora design system and product finder remain original, explainable and factual", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/material-system.css", import.meta.url), "utf8");

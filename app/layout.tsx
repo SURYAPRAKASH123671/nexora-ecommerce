@@ -9,6 +9,7 @@ import "./catalog-scale.css";
 import "./polish.css";
 import "./header-polish.css";
 import "./material-system.css";
+import "./reference-hero.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
