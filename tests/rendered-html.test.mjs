@@ -441,3 +441,24 @@ test("Nexora design system and shopping guide remain original, explainable and f
   assert.match(page, /visual discovery/);
   assert.match(layout, /nexora-commerce-surya\.kssuryaprakash2\.chatgpt\.site/);
 });
+
+test("support system persists protected conversations, files, tickets and agent handover", async () => {
+  const schema = await readFile(new URL("../db/schema.ts", import.meta.url), "utf8");
+  const conversations = await readFile(new URL("../app/api/site/support/conversations/route.ts", import.meta.url), "utf8");
+  const messages = await readFile(new URL("../app/api/site/support/messages/route.ts", import.meta.url), "utf8");
+  const files = await readFile(new URL("../app/api/site/support/files/route.ts", import.meta.url), "utf8");
+  const admin = await readFile(new URL("../app/api/site/admin/support/route.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  for (const table of ["support_conversations", "support_messages", "support_attachments", "support_tickets", "support_internal_notes"]) assert.match(schema, new RegExp(table));
+  assert.match(conversations, /requireSiteUser/);
+  assert.match(messages, /20/);
+  assert.match(files, /%PDF-/);
+  assert.match(files, /PENDING_EXTERNAL_SCAN/);
+  assert.match(admin, /requireAdmin/);
+  assert.match(admin, /Internal note|support_internal_notes/);
+  assert.match(page, /refreshes every few seconds/);
+  assert.match(page, /WebSocket presence.*not represented as active/);
+  assert.match(page, /English/);
+  assert.match(page, /தமிழ்/);
+  assert.match(page, /हिन्दी/);
+});

@@ -524,3 +524,97 @@ export const productFaqs = sqliteTable(
     ),
   ],
 );
+
+export const supportConversations = sqliteTable(
+  "support_conversations",
+  {
+    id: text("id").primaryKey(),
+    customerEmail: text("customer_email").notNull(),
+    customerName: text("customer_name").notNull(),
+    language: text("language").notNull().default("en"),
+    status: text("status").notNull().default("OPEN"),
+    intent: text("intent").notNull().default("GENERAL"),
+    assignedAgentEmail: text("assigned_agent_email"),
+    summary: text("summary"),
+    lastMessageAt: text("last_message_at").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("support_conversations_customer_idx").on(table.customerEmail, table.lastMessageAt),
+    index("support_conversations_queue_idx").on(table.status, table.lastMessageAt),
+    index("support_conversations_agent_idx").on(table.assignedAgentEmail, table.status),
+  ],
+);
+
+export const supportMessages = sqliteTable(
+  "support_messages",
+  {
+    id: text("id").primaryKey(),
+    conversationId: text("conversation_id").notNull(),
+    senderRole: text("sender_role").notNull(),
+    senderEmail: text("sender_email").notNull(),
+    body: text("body").notNull(),
+    messageType: text("message_type").notNull().default("TEXT"),
+    deliveryStatus: text("delivery_status").notNull().default("DELIVERED"),
+    readAt: text("read_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("support_messages_conversation_time_idx").on(table.conversationId, table.createdAt),
+    index("support_messages_unread_idx").on(table.conversationId, table.senderRole, table.readAt),
+  ],
+);
+
+export const supportAttachments = sqliteTable(
+  "support_attachments",
+  {
+    id: text("id").primaryKey(),
+    conversationId: text("conversation_id").notNull(),
+    messageId: text("message_id"),
+    customerEmail: text("customer_email").notNull(),
+    objectKey: text("object_key").notNull(),
+    originalName: text("original_name").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    scanStatus: text("scan_status").notNull().default("PENDING"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("support_attachments_object_unique").on(table.objectKey),
+    index("support_attachments_conversation_idx").on(table.conversationId),
+  ],
+);
+
+export const supportTickets = sqliteTable(
+  "support_tickets",
+  {
+    id: text("id").primaryKey(),
+    conversationId: text("conversation_id").notNull(),
+    customerEmail: text("customer_email").notNull(),
+    orderNumber: text("order_number"),
+    ticketType: text("ticket_type").notNull(),
+    priority: text("priority").notNull().default("NORMAL"),
+    status: text("status").notNull().default("OPEN"),
+    subject: text("subject").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("support_tickets_customer_idx").on(table.customerEmail, table.createdAt),
+    index("support_tickets_queue_idx").on(table.status, table.priority, table.createdAt),
+  ],
+);
+
+export const supportInternalNotes = sqliteTable(
+  "support_internal_notes",
+  {
+    id: text("id").primaryKey(),
+    conversationId: text("conversation_id").notNull(),
+    agentEmail: text("agent_email").notNull(),
+    body: text("body").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("support_internal_notes_conversation_idx").on(table.conversationId, table.createdAt)],
+);

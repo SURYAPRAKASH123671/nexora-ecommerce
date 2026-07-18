@@ -85,6 +85,30 @@ p { text-wrap: pretty; }
 .nexora-guide form button { width: 44px; min-height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--md-primary); color: #fff; cursor: pointer; }
 .nexora-guide form svg { width: 18px; }
 .guide-disclosure { margin: 12px 5px 1px; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.support-mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; margin-bottom: 12px; border-radius: 14px; background: var(--md-surface-container); }
+.support-mode-tabs button { min-height: 38px; display: flex; align-items: center; justify-content: center; gap: 7px; border: 0; border-radius: 11px; background: transparent; color: var(--muted); font-size: 10px; font-weight: 700; cursor: pointer; }
+.support-mode-tabs button[aria-selected="true"] { background: #fff; color: var(--md-primary); box-shadow: var(--md-elevation-1); }
+.support-mode-tabs svg { width: 15px; }
+.support-presence { display: grid; grid-template-columns: auto 1fr auto; gap: 9px; align-items: center; border: 1px solid #e2e6ee; border-radius: 15px; padding: 10px; background: #fff; }
+.support-presence > i { width: 9px; height: 9px; border-radius: 50%; background: #f2a51a; }
+.support-presence span { display: flex; flex-direction: column; gap: 2px; }
+.support-presence b { font-size: 10px; }.support-presence small { max-width: 210px; color: var(--muted); font-size: 8px; line-height: 1.35; }
+.support-presence select { min-height: 34px; border: 1px solid var(--line); border-radius: 9px; background: #fff; font-size: 9px; }
+.support-signin { min-height: 270px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px; text-align: center; }
+.support-signin > svg { width: 32px; color: var(--md-primary); }.support-signin h3 { margin: 14px 0 5px; }.support-signin p { color: var(--muted); font-size: 10px; line-height: 1.5; }.support-signin button { margin-top: 10px; }
+.support-message-list { min-height: 260px; max-height: 370px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 12px 2px; }
+.support-message-list article { max-width: 84%; display: flex; flex-direction: column; gap: 4px; }
+.support-message-list article span { border-radius: 15px 15px 15px 5px; padding: 10px 12px; background: var(--md-surface-container); font-size: 11px; line-height: 1.5; }
+.support-message-list article.customer { align-self: flex-end; }.support-message-list article.customer span { border-radius: 15px 15px 5px 15px; background: var(--md-primary); color: #fff; }
+.support-message-list article small { color: var(--muted); font-size: 8px; }.support-message-list article.customer small { text-align: right; }
+.nexora-guide form.support-compose { grid-template-columns: 42px 1fr 44px; }
+.support-compose > button:first-of-type { border: 1px solid var(--md-outline-variant); background: #fff; color: var(--muted); }.support-compose > button:first-of-type:hover { color: var(--md-primary); background: #f0f5ff; }
+.admin-support-layout { display: grid; grid-template-columns: 280px 1fr; gap: 14px; min-height: 420px; }
+.support-queue { overflow: auto; border: 1px solid var(--line); border-radius: 15px; padding: 6px; background: var(--md-surface-container-low); }
+.support-queue > button { width: 100%; min-height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 0; border-radius: 11px; padding: 9px; background: transparent; text-align: left; cursor: pointer; }.support-queue > button.active,.support-queue > button:hover { background: #e7efff; }.support-queue span { min-width: 0; display: flex; flex-direction: column; gap: 3px; }.support-queue b,.support-queue small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.support-queue b { font-size: 11px; }.support-queue small { color: var(--muted); font-size: 9px; }.support-queue em { color: var(--md-primary); font-size: 8px; font-style: normal; text-transform: uppercase; }
+.support-workspace { min-width: 0; border: 1px solid var(--line); border-radius: 15px; padding: 13px; }.support-agent-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--line); }.support-agent-head span { display: flex; flex-direction: column; }.support-agent-head small { color: var(--muted); font-size: 9px; }.support-agent-head button,.support-admin-actions button { min-height: 35px; border: 1px solid var(--line); border-radius: 9px; background: #fff; font-size: 9px; cursor: pointer; }
+.support-agent-messages { height: 250px; overflow: auto; padding: 10px 2px; }.support-agent-messages p { display: flex; flex-direction: column; gap: 3px; margin: 0 0 9px; }.support-agent-messages b,.support-agent-messages small { color: var(--muted); font-size: 8px; }.support-agent-messages span { width: fit-content; max-width: 80%; border-radius: 11px; padding: 8px 10px; background: var(--md-surface-container); font-size: 10px; }.support-agent-messages .agent { align-items: flex-end; }.support-agent-messages .agent span { background: #e5eeff; }.support-workspace form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }.support-workspace form input { min-width: 0; border: 1px solid var(--line); border-radius: 999px; padding: 0 13px; }.support-workspace form button { padding-inline: 18px; }.support-admin-actions { display: flex; gap: 7px; margin-top: 8px; }
+@media(max-width:800px){.admin-support-layout{grid-template-columns:1fr}.support-queue{max-height:220px}}
 .guide-visual { position: relative; height: 155px; overflow: hidden; border-radius: 18px; margin-bottom: 12px; background: var(--md-surface-container); }
 .guide-visual img { width: 100%; height: 100%; object-fit: contain; }
 .guide-visual button { position: absolute; right: 8px; bottom: 8px; min-height: 32px; border: 0; border-radius: 999px; padding: 0 10px; background: rgba(255,255,255,.92); font-size: 9px; cursor: pointer; }

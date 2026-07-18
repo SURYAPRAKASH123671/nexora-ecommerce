@@ -7,6 +7,8 @@ import {
   Columns3,
   ScanSearch,
   LoaderCircle,
+  Headphones,
+  Paperclip,
   Mic,
   Moon,
   Search,
@@ -17,13 +19,18 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import { categories, fallbackProducts, productSlug, type Product } from "./catalog";
+import {
+  categories,
+  fallbackProducts,
+  productSlug,
+  type Product,
+} from "./catalog";
 import PremiumProductPage from "./PremiumProductPage";
-import { getProductProfile, type ProductConfiguration } from "./product-details";
-import SupportPage, {
-  ProfessionalFooter,
-  type InfoPage,
-} from "./SupportPages";
+import {
+  getProductProfile,
+  type ProductConfiguration,
+} from "./product-details";
+import SupportPage, { ProfessionalFooter, type InfoPage } from "./SupportPages";
 
 type View =
   | "home"
@@ -35,7 +42,15 @@ type View =
   | "account"
   | "admin"
   | "information";
-type SortMode = "recommended" | "newest" | "popularity" | "best-seller" | "rating" | "price-low" | "price-high" | "discount";
+type SortMode =
+  | "recommended"
+  | "newest"
+  | "popularity"
+  | "best-seller"
+  | "rating"
+  | "price-low"
+  | "price-high"
+  | "discount";
 type CatalogResponse = {
   items: Product[];
   pagination: {
@@ -59,6 +74,15 @@ type AuthUser = {
   isAdmin: boolean;
 };
 type AuthSession = { user: AuthUser };
+type SupportMessage = {
+  id: string;
+  sender_role: "CUSTOMER" | "AGENT" | "SYSTEM";
+  sender_email: string;
+  body: string;
+  delivery_status: string;
+  read_at: string | null;
+  created_at: string;
+};
 type OrderCreated = {
   orderNumber: string;
   total: number;
@@ -165,7 +189,9 @@ export default function Home({
 }: StorefrontInitialProps = {}) {
   const initialProduct =
     routedProduct ??
-    fallbackProducts.find((product) => productSlug(product.name) === initialProductSlug) ??
+    fallbackProducts.find(
+      (product) => productSlug(product.name) === initialProductSlug,
+    ) ??
     fallbackProducts[0];
   const [view, setView] = useState<View>(initialView);
   const [products, setProducts] = useState<Product[]>(fallbackProducts);
@@ -201,9 +227,20 @@ export default function Home({
   const [voiceListening, setVoiceListening] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideQuestion, setGuideQuestion] = useState("");
-  const [guideAnswer, setGuideAnswer] = useState("Tell me what you need and I’ll rank matching catalogue products using transparent price, rating and shopping signals.");
+  const [guideAnswer, setGuideAnswer] = useState(
+    "Tell me what you need and I’ll rank matching catalogue products using transparent price, rating and shopping signals.",
+  );
   const [visualPreview, setVisualPreview] = useState("");
   const visualSearchInput = useRef<HTMLInputElement>(null);
+  const [supportMode, setSupportMode] = useState<"guide" | "support">("guide");
+  const [supportLanguage, setSupportLanguage] = useState<"en" | "ta" | "hi">(
+    "en",
+  );
+  const [supportConversationId, setSupportConversationId] = useState("");
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
+  const [supportDraft, setSupportDraft] = useState("");
+  const [supportBusy, setSupportBusy] = useState(false);
+  const supportFileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const pages: InfoPage[] = [
@@ -225,7 +262,9 @@ export default function Home({
       }
       if (path.startsWith("products/")) {
         const slug = path.slice("products/".length);
-        const product = fallbackProducts.find((item) => productSlug(item.name) === slug);
+        const product = fallbackProducts.find(
+          (item) => productSlug(item.name) === slug,
+        );
         if (product) {
           setSelected(product);
           setView("product");
@@ -284,7 +323,7 @@ export default function Home({
           ? `Professional ${titles[infoPage]} information from Nexora Commerce India.`
           : view === "product"
             ? selected.description
-          : "A premium commerce experience for technology and lifestyle essentials.";
+            : "A premium commerce experience for technology and lifestyle essentials.";
   }, [view, infoPage, selected]);
 
   useEffect(() => {
@@ -302,9 +341,17 @@ export default function Home({
       if (Array.isArray(savedCart)) setCart(savedCart);
       if (Array.isArray(savedWishlist)) setWishlist(savedWishlist);
       if (Array.isArray(savedRecent)) setRecentlyViewed(savedRecent);
-      if (Array.isArray(savedComparison)) setComparisonIds(savedComparison.slice(0, 4));
-      const savedSearches = JSON.parse(localStorage.getItem("nexora-recent-searches") ?? "[]");
-      if (Array.isArray(savedSearches)) setRecentSearches(savedSearches.filter((item): item is string => typeof item === "string").slice(0, 5));
+      if (Array.isArray(savedComparison))
+        setComparisonIds(savedComparison.slice(0, 4));
+      const savedSearches = JSON.parse(
+        localStorage.getItem("nexora-recent-searches") ?? "[]",
+      );
+      if (Array.isArray(savedSearches))
+        setRecentSearches(
+          savedSearches
+            .filter((item): item is string => typeof item === "string")
+            .slice(0, 5),
+        );
       setDarkMode(localStorage.getItem("nexora-theme") === "dark");
     } catch {
       localStorage.removeItem("nexora-cart");
@@ -324,7 +371,14 @@ export default function Home({
     localStorage.setItem("nexora-comparison", JSON.stringify(comparisonIds));
     localStorage.setItem("nexora-theme", darkMode ? "dark" : "light");
     document.documentElement.dataset.theme = darkMode ? "dark" : "light";
-  }, [cart, wishlist, recentlyViewed, comparisonIds, darkMode, preferencesReady]);
+  }, [
+    cart,
+    wishlist,
+    recentlyViewed,
+    comparisonIds,
+    darkMode,
+    preferencesReady,
+  ]);
 
   useEffect(() => {
     const timer = window.setInterval(
@@ -347,7 +401,38 @@ export default function Home({
       navigator.serviceWorker.register("/sw.js").catch(() => undefined);
   }, []);
 
-  useEffect(() => () => { if (visualPreview) URL.revokeObjectURL(visualPreview); }, [visualPreview]);
+  useEffect(
+    () => () => {
+      if (visualPreview) URL.revokeObjectURL(visualPreview);
+    },
+    [visualPreview],
+  );
+
+  useEffect(() => {
+    if (!guideOpen || supportMode !== "support" || !supportConversationId)
+      return;
+    let active = true;
+    const load = () =>
+      fetch(
+        `/api/site/support/messages?conversationId=${encodeURIComponent(supportConversationId)}`,
+        { cache: "no-store" },
+      )
+        .then((response) =>
+          response.ok
+            ? response.json()
+            : Promise.reject(new Error("Support history unavailable")),
+        )
+        .then((rows: SupportMessage[]) => {
+          if (active) setSupportMessages(rows);
+        })
+        .catch(() => undefined);
+    load();
+    const timer = window.setInterval(load, 5000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [guideOpen, supportMode, supportConversationId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -356,24 +441,25 @@ export default function Home({
       if (query.trim()) params.set("q", query.trim());
       if (category !== "All") params.set("category", category);
       if (sortMode !== "recommended") params.set("sort", sortMode);
-      if (category === "Phones" && mobileBrand !== "All brands") params.set("brand", mobileBrand);
+      if (category === "Phones" && mobileBrand !== "All brands")
+        params.set("brand", mobileBrand);
       setLoading(true);
       fetch(`/api/site/catalog?${params}`, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("Catalog unavailable");
-        return response.json();
-      })
-      .then((data: CatalogResponse) => {
-        if (!Array.isArray(data.items)) return;
-        setProducts(data.items);
-        if (data.items[0] && !initialProductSlug) setSelected(data.items[0]);
-        setCatalogPage(1);
-        setCatalogTotal(data.pagination.total);
-        setCatalogHasMore(data.pagination.hasMore);
-        setUsingDemoCatalog(false);
-      })
-      .catch(() => undefined)
-      .finally(() => setLoading(false));
+        .then((response) => {
+          if (!response.ok) throw new Error("Catalog unavailable");
+          return response.json();
+        })
+        .then((data: CatalogResponse) => {
+          if (!Array.isArray(data.items)) return;
+          setProducts(data.items);
+          if (data.items[0] && !initialProductSlug) setSelected(data.items[0]);
+          setCatalogPage(1);
+          setCatalogTotal(data.pagination.total);
+          setCatalogHasMore(data.pagination.hasMore);
+          setUsingDemoCatalog(false);
+        })
+        .catch(() => undefined)
+        .finally(() => setLoading(false));
     }, 220);
     return () => {
       window.clearTimeout(timer);
@@ -393,7 +479,8 @@ export default function Home({
       if (query.trim()) params.set("q", query.trim());
       if (category !== "All") params.set("category", category);
       if (sortMode !== "recommended") params.set("sort", sortMode);
-      if (category === "Phones" && mobileBrand !== "All brands") params.set("brand", mobileBrand);
+      if (category === "Phones" && mobileBrand !== "All brands")
+        params.set("brand", mobileBrand);
       const response = await fetch(`/api/site/catalog?${params}`);
       if (!response.ok) throw new Error("Catalog unavailable");
       const data = (await response.json()) as CatalogResponse;
@@ -449,16 +536,30 @@ export default function Home({
       return [...matches].sort(
         (a, b) => b.rating - a.rating || b.reviews - a.reviews,
       );
-    if (sortMode === "discount") return [...matches].sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0));
-    if (sortMode === "newest") return [...matches].sort((a, b) => Number(Boolean(b.newArrival)) - Number(Boolean(a.newArrival)) || b.id - a.id);
-    if (sortMode === "best-seller" || sortMode === "popularity") return [...matches].sort((a, b) => Number(Boolean(b.bestSeller)) - Number(Boolean(a.bestSeller)) || b.reviews - a.reviews);
+    if (sortMode === "discount")
+      return [...matches].sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0));
+    if (sortMode === "newest")
+      return [...matches].sort(
+        (a, b) =>
+          Number(Boolean(b.newArrival)) - Number(Boolean(a.newArrival)) ||
+          b.id - a.id,
+      );
+    if (sortMode === "best-seller" || sortMode === "popularity")
+      return [...matches].sort(
+        (a, b) =>
+          Number(Boolean(b.bestSeller)) - Number(Boolean(a.bestSeller)) ||
+          b.reviews - a.reviews,
+      );
     return matches;
   }, [products, query, category, sortMode]);
 
   const mobileFiltered = useMemo(() => {
     if (category !== "Phones" || mobileBudget === "All prices") return filtered;
     const [minimum, maximum] = mobileBudget.split("-").map(Number);
-    return filtered.filter((product) => product.price >= minimum && (!maximum || product.price <= maximum));
+    return filtered.filter(
+      (product) =>
+        product.price >= minimum && (!maximum || product.price <= maximum),
+    );
   }, [filtered, category, mobileBudget]);
 
   const cartCount = cart.reduce((total, line) => total + line.quantity, 0);
@@ -484,28 +585,48 @@ export default function Home({
         .slice(0, 5)
     : [];
   const trendingSearches = useMemo(
-    () => products
-      .filter((product) => product.bestSeller)
-      .sort((a, b) => b.reviews - a.reviews)
-      .slice(0, 5)
-      .map((product) => product.name),
+    () =>
+      products
+        .filter((product) => product.bestSeller)
+        .sort((a, b) => b.reviews - a.reviews)
+        .slice(0, 5)
+        .map((product) => product.name),
     [products],
   );
   const recommendedProducts = useMemo(() => {
     const signals = new Map<string, number>();
     const addSignal = (product: Product | undefined, weight: number) => {
       if (!product) return;
-      signals.set(product.categoryName, (signals.get(product.categoryName) ?? 0) + weight);
+      signals.set(
+        product.categoryName,
+        (signals.get(product.categoryName) ?? 0) + weight,
+      );
     };
-    recentlyViewed.forEach((id) => addSignal(products.find((item) => item.id === id), 4));
-    wishlist.forEach((id) => addSignal(products.find((item) => item.id === id), 3));
+    recentlyViewed.forEach((id) =>
+      addSignal(
+        products.find((item) => item.id === id),
+        4,
+      ),
+    );
+    wishlist.forEach((id) =>
+      addSignal(
+        products.find((item) => item.id === id),
+        3,
+      ),
+    );
     cart.forEach((line) => addSignal(line.product, 5 * line.quantity));
-    const excluded = new Set([...recentlyViewed.slice(0, 2), ...cart.map((line) => line.product.id)]);
+    const excluded = new Set([
+      ...recentlyViewed.slice(0, 2),
+      ...cart.map((line) => line.product.id),
+    ]);
     return [...products]
       .filter((product) => !excluded.has(product.id))
-      .sort((a, b) =>
-        (signals.get(b.categoryName) ?? 0) - (signals.get(a.categoryName) ?? 0) ||
-        b.rating - a.rating || b.reviews - a.reviews,
+      .sort(
+        (a, b) =>
+          (signals.get(b.categoryName) ?? 0) -
+            (signals.get(a.categoryName) ?? 0) ||
+          b.rating - a.rating ||
+          b.reviews - a.reviews,
       )
       .slice(0, 4);
   }, [products, recentlyViewed, wishlist, cart]);
@@ -534,10 +655,9 @@ export default function Home({
 
   function openProduct(product: Product) {
     setSelected(product);
-    setRecentlyViewed((current) => [
-      product.id,
-      ...current.filter((id) => id !== product.id),
-    ].slice(0, 12));
+    setRecentlyViewed((current) =>
+      [product.id, ...current.filter((id) => id !== product.id)].slice(0, 12),
+    );
     setView("product");
     window.history.pushState({}, "", `/products/${productSlug(product.name)}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -624,7 +744,10 @@ export default function Home({
     const term = value.trim();
     if (!term) return;
     setRecentSearches((current) => {
-      const next = [term, ...current.filter((item) => item.toLowerCase() !== term.toLowerCase())].slice(0, 5);
+      const next = [
+        term,
+        ...current.filter((item) => item.toLowerCase() !== term.toLowerCase()),
+      ].slice(0, 5);
       localStorage.setItem("nexora-recent-searches", JSON.stringify(next));
       return next;
     });
@@ -641,10 +764,24 @@ export default function Home({
 
   function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (!searchOpen) setSearchOpen(true);
-    if (event.key === "Escape") { setSearchOpen(false); setSearchActiveIndex(-1); return; }
+    if (event.key === "Escape") {
+      setSearchOpen(false);
+      setSearchActiveIndex(-1);
+      return;
+    }
     if (!searchSuggestions.length) return;
-    if (event.key === "ArrowDown") { event.preventDefault(); setSearchActiveIndex((current) => (current + 1) % searchSuggestions.length); }
-    if (event.key === "ArrowUp") { event.preventDefault(); setSearchActiveIndex((current) => (current <= 0 ? searchSuggestions.length - 1 : current - 1)); }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setSearchActiveIndex(
+        (current) => (current + 1) % searchSuggestions.length,
+      );
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setSearchActiveIndex((current) =>
+        current <= 0 ? searchSuggestions.length - 1 : current - 1,
+      );
+    }
     if (event.key === "Enter" && searchActiveIndex >= 0) {
       event.preventDefault();
       const product = searchSuggestions[searchActiveIndex];
@@ -653,15 +790,66 @@ export default function Home({
   }
 
   function startVoiceSearch() {
-    const SpeechRecognition = (window as unknown as { SpeechRecognition?: new () => { lang: string; interimResults: boolean; start: () => void; onresult: (event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void; onend: () => void; onerror: () => void }; webkitSpeechRecognition?: new () => { lang: string; interimResults: boolean; start: () => void; onresult: (event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void; onend: () => void; onerror: () => void } }).SpeechRecognition
-      ?? (window as unknown as { webkitSpeechRecognition?: new () => { lang: string; interimResults: boolean; start: () => void; onresult: (event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void; onend: () => void; onerror: () => void } }).webkitSpeechRecognition;
-    if (!SpeechRecognition) { showNotice("Voice search is not supported by this browser"); return; }
+    const SpeechRecognition =
+      (
+        window as unknown as {
+          SpeechRecognition?: new () => {
+            lang: string;
+            interimResults: boolean;
+            start: () => void;
+            onresult: (event: {
+              results: ArrayLike<{ 0: { transcript: string } }>;
+            }) => void;
+            onend: () => void;
+            onerror: () => void;
+          };
+          webkitSpeechRecognition?: new () => {
+            lang: string;
+            interimResults: boolean;
+            start: () => void;
+            onresult: (event: {
+              results: ArrayLike<{ 0: { transcript: string } }>;
+            }) => void;
+            onend: () => void;
+            onerror: () => void;
+          };
+        }
+      ).SpeechRecognition ??
+      (
+        window as unknown as {
+          webkitSpeechRecognition?: new () => {
+            lang: string;
+            interimResults: boolean;
+            start: () => void;
+            onresult: (event: {
+              results: ArrayLike<{ 0: { transcript: string } }>;
+            }) => void;
+            onend: () => void;
+            onerror: () => void;
+          };
+        }
+      ).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      showNotice("Voice search is not supported by this browser");
+      return;
+    }
     const recognition = new SpeechRecognition();
-    recognition.lang = "en-IN"; recognition.interimResults = false;
-    recognition.onresult = (event) => { const transcript = event.results[0]?.[0]?.transcript?.trim(); if (transcript) { setQuery(transcript); setSearchOpen(true); } };
+    recognition.lang = "en-IN";
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim();
+      if (transcript) {
+        setQuery(transcript);
+        setSearchOpen(true);
+      }
+    };
     recognition.onend = () => setVoiceListening(false);
-    recognition.onerror = () => { setVoiceListening(false); showNotice("Voice search could not start"); };
-    setVoiceListening(true); recognition.start();
+    recognition.onerror = () => {
+      setVoiceListening(false);
+      showNotice("Voice search could not start");
+    };
+    setVoiceListening(true);
+    recognition.start();
   }
 
   function askGuide(event: React.FormEvent) {
@@ -669,33 +857,169 @@ export default function Home({
     const intent = guideQuestion.trim().toLowerCase();
     if (!intent) return;
     const aliases: Record<string, string[]> = {
-      Phones: ["phone", "mobile", "smartphone"], Audio: ["audio", "headphone", "earbud", "speaker"],
-      Computing: ["laptop", "computer", "computing"], Grocery: ["grocery", "food", "snack", "drink"],
-      Wearables: ["watch", "wearable"], Cameras: ["camera", "photography"], Gaming: ["gaming", "game"],
-      Kitchen: ["kitchen", "cooking"], "Home Appliances": ["appliance", "home"], "Personal Care": ["personal care", "grooming"],
+      Phones: ["phone", "mobile", "smartphone"],
+      Audio: ["audio", "headphone", "earbud", "speaker"],
+      Computing: ["laptop", "computer", "computing"],
+      Grocery: ["grocery", "food", "snack", "drink"],
+      Wearables: ["watch", "wearable"],
+      Cameras: ["camera", "photography"],
+      Gaming: ["gaming", "game"],
+      Kitchen: ["kitchen", "cooking"],
+      "Home Appliances": ["appliance", "home"],
+      "Personal Care": ["personal care", "grooming"],
     };
-    const requestedCategory = Object.entries(aliases).find(([, words]) => words.some((word) => intent.includes(word)))?.[0];
-    const budgetMatch = intent.match(/(?:under|below|less than)\s*(?:₹|rs\.?\s*)?([\d,]+)/i);
-    const budget = budgetMatch ? Number(budgetMatch[1].replaceAll(",", "")) : null;
+    const requestedCategory = Object.entries(aliases).find(([, words]) =>
+      words.some((word) => intent.includes(word)),
+    )?.[0];
+    const budgetMatch = intent.match(
+      /(?:under|below|less than)\s*(?:₹|rs\.?\s*)?([\d,]+)/i,
+    );
+    const budget = budgetMatch
+      ? Number(budgetMatch[1].replaceAll(",", ""))
+      : null;
     const candidates = products
-      .filter((product) => !requestedCategory || product.categoryName === requestedCategory)
+      .filter(
+        (product) =>
+          !requestedCategory || product.categoryName === requestedCategory,
+      )
       .filter((product) => !budget || product.price <= budget)
       .sort((a, b) => b.rating - a.rating || b.reviews - a.reviews)
       .slice(0, 3);
     if (!candidates.length) {
-      setGuideAnswer("I couldn’t find a catalogue match for those exact constraints. Try a broader category or a higher budget; I won’t invent unavailable products.");
+      setGuideAnswer(
+        "I couldn’t find a catalogue match for those exact constraints. Try a broader category or a higher budget; I won’t invent unavailable products.",
+      );
       return;
     }
-    const constraint = [requestedCategory, budget ? `under ${money.format(budget)}` : ""].filter(Boolean).join(" ");
-    setGuideAnswer(`${constraint ? `For ${constraint}, ` : "Based on current catalogue signals, "}${candidates.map((item) => `${item.name} (${money.format(item.price)}, ${item.rating.toFixed(1)}★)`).join("; ")}. Rankings use recorded price and rating data, not generated claims.`);
+    const constraint = [
+      requestedCategory,
+      budget ? `under ${money.format(budget)}` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    setGuideAnswer(
+      `${constraint ? `For ${constraint}, ` : "Based on current catalogue signals, "}${candidates.map((item) => `${item.name} (${money.format(item.price)}, ${item.rating.toFixed(1)}★)`).join("; ")}. Rankings use recorded price and rating data, not generated claims.`,
+    );
   }
 
   function selectVisualSearch(file: File | undefined) {
     if (!file) return;
-    if (!file.type.startsWith("image/")) { showNotice("Choose an image file for visual discovery"); return; }
-    setVisualPreview((current) => { if (current) URL.revokeObjectURL(current); return URL.createObjectURL(file); });
-    setGuideAnswer("Image selected for visual discovery. Choose a category below to narrow the catalogue. Nexora does not claim an automated image match without a connected vision model.");
+    if (!file.type.startsWith("image/")) {
+      showNotice("Choose an image file for visual discovery");
+      return;
+    }
+    setVisualPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return URL.createObjectURL(file);
+    });
+    setGuideAnswer(
+      "Image selected for visual discovery. Choose a category below to narrow the catalogue. Nexora does not claim an automated image match without a connected vision model.",
+    );
     setGuideOpen(true);
+  }
+
+  async function startSupportConversation() {
+    if (!auth) {
+      navigate("account");
+      showNotice("Sign in to start protected support");
+      return;
+    }
+    setSupportBusy(true);
+    try {
+      const existing = await fetch("/api/site/support/conversations", {
+        cache: "no-store",
+      });
+      if (existing.ok) {
+        const rows = (await existing.json()) as Array<{
+          id: string;
+          status: string;
+        }>;
+        const current = rows.find((row) => row.status !== "CLOSED");
+        if (current) {
+          setSupportConversationId(current.id);
+          setSupportMode("support");
+          return;
+        }
+      }
+      const response = await fetch("/api/site/support/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          language: supportLanguage,
+          intent: "GENERAL",
+          subject: "Storefront support request",
+        }),
+      });
+      if (!response.ok) throw new Error(await readApiError(response));
+      const created = (await response.json()) as { id: string };
+      setSupportConversationId(created.id);
+      setSupportMode("support");
+    } catch (caught) {
+      showNotice(
+        caught instanceof Error ? caught.message : "Support could not start",
+      );
+    } finally {
+      setSupportBusy(false);
+    }
+  }
+
+  async function sendSupportMessage(event: React.FormEvent) {
+    event.preventDefault();
+    if (!supportDraft.trim() || !supportConversationId) return;
+    setSupportBusy(true);
+    try {
+      const response = await fetch("/api/site/support/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId: supportConversationId,
+          message: supportDraft,
+        }),
+      });
+      if (!response.ok) throw new Error(await readApiError(response));
+      const optimistic: SupportMessage = {
+        id: crypto.randomUUID(),
+        sender_role: "CUSTOMER",
+        sender_email: auth?.user.email ?? "",
+        body: supportDraft.trim(),
+        delivery_status: "DELIVERED",
+        read_at: null,
+        created_at: new Date().toISOString(),
+      };
+      setSupportMessages((current) => [...current, optimistic]);
+      setSupportDraft("");
+    } catch (caught) {
+      showNotice(
+        caught instanceof Error ? caught.message : "Message could not be sent",
+      );
+    } finally {
+      setSupportBusy(false);
+    }
+  }
+
+  async function uploadSupportFile(file: File | undefined) {
+    if (!file || !supportConversationId) return;
+    setSupportBusy(true);
+    try {
+      const form = new FormData();
+      form.append("conversationId", supportConversationId);
+      form.append("file", file);
+      const response = await fetch("/api/site/support/files", {
+        method: "POST",
+        body: form,
+      });
+      if (!response.ok) throw new Error(await readApiError(response));
+      showNotice(`${file.name} uploaded for protected review`);
+    } catch (caught) {
+      showNotice(
+        caught instanceof Error
+          ? caught.message
+          : "Attachment could not be uploaded",
+      );
+    } finally {
+      setSupportBusy(false);
+      if (supportFileInput.current) supportFileInput.current.value = "";
+    }
   }
 
   function cycleSort() {
@@ -721,40 +1045,94 @@ export default function Home({
           </span>
           <span>Nexora</span>
         </button>
-        <form className={`search${searchOpen ? " search-open" : ""}`} onSubmit={submitSearch} role="search" onFocus={() => setSearchOpen(true)} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) { setSearchOpen(false); setSearchActiveIndex(-1); } }}>
+        <form
+          className={`search${searchOpen ? " search-open" : ""}`}
+          onSubmit={submitSearch}
+          role="search"
+          onFocus={() => setSearchOpen(true)}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) {
+              setSearchOpen(false);
+              setSearchActiveIndex(-1);
+            }
+          }}
+        >
           <Search className="search-leading" aria-hidden="true" />
           <input
             value={query}
-            onChange={(event) => { setQuery(event.target.value); setSearchActiveIndex(-1); setSearchOpen(true); }}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setSearchActiveIndex(-1);
+              setSearchOpen(true);
+            }}
             onKeyDown={handleSearchKeyDown}
             placeholder="Search products, categories and more"
             aria-label="Search products"
             aria-expanded={searchOpen}
             aria-controls="nexora-search-panel"
-            aria-activedescendant={searchActiveIndex >= 0 ? `search-option-${searchSuggestions[searchActiveIndex]?.id}` : undefined}
+            aria-activedescendant={
+              searchActiveIndex >= 0
+                ? `search-option-${searchSuggestions[searchActiveIndex]?.id}`
+                : undefined
+            }
             autoComplete="off"
           />
-          {loading && query.trim() && <LoaderCircle className="search-loader" aria-label="Searching" />}
+          {loading && query.trim() && (
+            <LoaderCircle className="search-loader" aria-label="Searching" />
+          )}
           {query && !loading && (
             <button
               className="search-icon-button"
               type="button"
-              onClick={() => { setQuery(""); setSearchActiveIndex(-1); }}
+              onClick={() => {
+                setQuery("");
+                setSearchActiveIndex(-1);
+              }}
               aria-label="Clear search"
             >
               <X aria-hidden="true" />
             </button>
           )}
-          <input ref={visualSearchInput} className="visual-search-input" type="file" accept="image/*" onChange={(event) => selectVisualSearch(event.target.files?.[0])} tabIndex={-1} aria-hidden="true" />
-          <button className="search-icon-button visual-search-button" type="button" onClick={() => visualSearchInput.current?.click()} aria-label="Search using a product image">
+          <input
+            ref={visualSearchInput}
+            className="visual-search-input"
+            type="file"
+            accept="image/*"
+            onChange={(event) => selectVisualSearch(event.target.files?.[0])}
+            tabIndex={-1}
+            aria-hidden="true"
+          />
+          <button
+            className="search-icon-button visual-search-button"
+            type="button"
+            onClick={() => visualSearchInput.current?.click()}
+            aria-label="Search using a product image"
+          >
             <ScanSearch aria-hidden="true" />
           </button>
-          <button className={`search-icon-button voice-search${voiceListening ? " listening" : ""}`} type="button" onClick={startVoiceSearch} aria-label={voiceListening ? "Listening for search" : "Search by voice"} aria-pressed={voiceListening}>
+          <button
+            className={`search-icon-button voice-search${voiceListening ? " listening" : ""}`}
+            type="button"
+            onClick={startVoiceSearch}
+            aria-label={
+              voiceListening ? "Listening for search" : "Search by voice"
+            }
+            aria-pressed={voiceListening}
+          >
             <Mic aria-hidden="true" />
           </button>
           {searchOpen && (
-            <div id="nexora-search-panel" className="search-suggestions" role={searchSuggestions.length ? "listbox" : "dialog"} aria-label="Search suggestions">
-              {query.trim() ? <small>Suggested products</small> : <small>Discover</small>}
+            <div
+              id="nexora-search-panel"
+              className="search-suggestions"
+              role={searchSuggestions.length ? "listbox" : "dialog"}
+              aria-label="Search suggestions"
+            >
+              {query.trim() ? (
+                <small>Suggested products</small>
+              ) : (
+                <small>Discover</small>
+              )}
               {searchSuggestions.map((product) => (
                 <button
                   type="button"
@@ -762,16 +1140,82 @@ export default function Home({
                   id={`search-option-${product.id}`}
                   onClick={() => chooseSearch(product.name, product)}
                   role="option"
-                  aria-selected={searchSuggestions[searchActiveIndex]?.id === product.id}
-                  className={searchSuggestions[searchActiveIndex]?.id === product.id ? "active" : ""}
+                  aria-selected={
+                    searchSuggestions[searchActiveIndex]?.id === product.id
+                  }
+                  className={
+                    searchSuggestions[searchActiveIndex]?.id === product.id
+                      ? "active"
+                      : ""
+                  }
                 >
-                  <Image src={product.imageUrl} unoptimized alt="" width={42} height={42} />
-                  <span><b>{product.name}</b><small>{product.categoryName} · {money.format(product.price)}</small></span>
+                  <Image
+                    src={product.imageUrl}
+                    unoptimized
+                    alt=""
+                    width={42}
+                    height={42}
+                  />
+                  <span>
+                    <b>{product.name}</b>
+                    <small>
+                      {product.categoryName} · {money.format(product.price)}
+                    </small>
+                  </span>
                 </button>
               ))}
-              {!query.trim() && recentSearches.length > 0 && <div className="search-chip-section"><span><b>Recent searches</b><button type="button" onClick={() => { setRecentSearches([]); localStorage.removeItem("nexora-recent-searches"); }}>Clear</button></span><div>{recentSearches.map((item) => <button type="button" key={item} onClick={() => chooseSearch(item)}>{item}</button>)}</div></div>}
-              {!query.trim() && <div className="search-chip-section"><span><b>Trending now</b></span><div>{trendingSearches.map((item) => <button type="button" key={item} onClick={() => chooseSearch(item)}>{item}</button>)}</div></div>}
-              {query.trim() && !searchSuggestions.length && !loading && <div className="search-empty"><Search aria-hidden="true"/><b>No close matches yet</b><span>Press Enter to search the complete catalogue.</span></div>}
+              {!query.trim() && recentSearches.length > 0 && (
+                <div className="search-chip-section">
+                  <span>
+                    <b>Recent searches</b>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRecentSearches([]);
+                        localStorage.removeItem("nexora-recent-searches");
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </span>
+                  <div>
+                    {recentSearches.map((item) => (
+                      <button
+                        type="button"
+                        key={item}
+                        onClick={() => chooseSearch(item)}
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {!query.trim() && (
+                <div className="search-chip-section">
+                  <span>
+                    <b>Trending now</b>
+                  </span>
+                  <div>
+                    {trendingSearches.map((item) => (
+                      <button
+                        type="button"
+                        key={item}
+                        onClick={() => chooseSearch(item)}
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {query.trim() && !searchSuggestions.length && !loading && (
+                <div className="search-empty">
+                  <Search aria-hidden="true" />
+                  <b>No close matches yet</b>
+                  <span>Press Enter to search the complete catalogue.</span>
+                </div>
+              )}
             </div>
           )}
         </form>
@@ -785,21 +1229,47 @@ export default function Home({
             <span aria-hidden="true">{darkMode ? <Sun /> : <Moon />}</span>
             <span>Theme</span>
           </button>
-          <button className={view === "catalog" ? "active" : ""} onClick={() => navigate("catalog")} aria-current={view === "catalog" ? "page" : undefined}>
-            <span aria-hidden="true"><Store /></span>
+          <button
+            className={view === "catalog" ? "active" : ""}
+            onClick={() => navigate("catalog")}
+            aria-current={view === "catalog" ? "page" : undefined}
+          >
+            <span aria-hidden="true">
+              <Store />
+            </span>
             <span>Shop</span>
           </button>
-          <button className={view === "account" ? "active" : ""} onClick={() => navigate("account")} aria-current={view === "account" ? "page" : undefined}>
-            <span aria-hidden="true"><UserRound /></span>
+          <button
+            className={view === "account" ? "active" : ""}
+            onClick={() => navigate("account")}
+            aria-current={view === "account" ? "page" : undefined}
+          >
+            <span aria-hidden="true">
+              <UserRound />
+            </span>
             <span>Account</span>
           </button>
-          <button className={`compare-action${view === "compare" ? " active" : ""}`} onClick={() => navigate("compare")} aria-current={view === "compare" ? "page" : undefined}>
-            <span aria-hidden="true"><Columns3 /></span>
+          <button
+            className={`compare-action${view === "compare" ? " active" : ""}`}
+            onClick={() => navigate("compare")}
+            aria-current={view === "compare" ? "page" : undefined}
+          >
+            <span aria-hidden="true">
+              <Columns3 />
+            </span>
             <span>Compare</span>
-            {comparisonIds.length > 0 && <b key={comparisonIds.length}>{comparisonIds.length}</b>}
+            {comparisonIds.length > 0 && (
+              <b key={comparisonIds.length}>{comparisonIds.length}</b>
+            )}
           </button>
-          <button className={`cart-action${view === "cart" ? " active" : ""}`} onClick={() => navigate("cart")} aria-current={view === "cart" ? "page" : undefined}>
-            <span aria-hidden="true"><ShoppingBag /></span>
+          <button
+            className={`cart-action${view === "cart" ? " active" : ""}`}
+            onClick={() => navigate("cart")}
+            aria-current={view === "cart" ? "page" : undefined}
+          >
+            <span aria-hidden="true">
+              <ShoppingBag />
+            </span>
             <span>Bag</span>
             {cartCount > 0 && <b key={cartCount}>{cartCount}</b>}
           </button>
@@ -811,7 +1281,9 @@ export default function Home({
           <button
             key={item}
             className={view === "catalog" && category === item ? "active" : ""}
-            aria-current={view === "catalog" && category === item ? "page" : undefined}
+            aria-current={
+              view === "catalog" && category === item ? "page" : undefined
+            }
             onClick={() => {
               setCategory(item);
               navigate("catalog");
@@ -917,7 +1389,12 @@ export default function Home({
                   </div>
                   <nav className="hero-dots" aria-label="Featured products">
                     {[0, 1, 2, 3].map((index) => (
-                      <button key={index} className={heroIndex === index ? "active" : ""} onClick={() => setHeroIndex(index)} aria-label={`Show featured product ${index + 1}`} />
+                      <button
+                        key={index}
+                        className={heroIndex === index ? "active" : ""}
+                        onClick={() => setHeroIndex(index)}
+                        aria-label={`Show featured product ${index + 1}`}
+                      />
                     ))}
                   </nav>
                 </div>
@@ -1006,7 +1483,9 @@ export default function Home({
 
             {products.some((product) => product.categoryName === "Grocery") && (
               <GroceryMarketplace
-                products={products.filter((product) => product.categoryName === "Grocery")}
+                products={products.filter(
+                  (product) => product.categoryName === "Grocery",
+                )}
                 onOpen={openProduct}
                 onAdd={addToCart}
                 wishlist={wishlist}
@@ -1245,7 +1724,11 @@ export default function Home({
               title="Frequently bought together"
               subtitle="Popular complementary choices from the same department"
               products={products
-                .filter((item) => item.id !== selected.id && item.categoryName === selected.categoryName)
+                .filter(
+                  (item) =>
+                    item.id !== selected.id &&
+                    item.categoryName === selected.categoryName,
+                )
                 .slice(0, 4)}
               onOpen={openProduct}
               onAdd={addToCart}
@@ -1258,7 +1741,11 @@ export default function Home({
               title="Similar products"
               subtitle="Compare nearby choices before deciding"
               products={products
-                .filter((item) => item.id !== selected.id && item.categoryName === selected.categoryName)
+                .filter(
+                  (item) =>
+                    item.id !== selected.id &&
+                    item.categoryName === selected.categoryName,
+                )
                 .slice(4, 8)}
               onOpen={openProduct}
               onAdd={addToCart}
@@ -1267,11 +1754,14 @@ export default function Home({
               loading={false}
               onAll={() => navigate("catalog")}
             />
-            {recentProducts.filter((item) => item.id !== selected.id).length > 0 && (
+            {recentProducts.filter((item) => item.id !== selected.id).length >
+              0 && (
               <ProductSection
                 title="Recently viewed"
                 subtitle="Continue exploring products you opened earlier"
-                products={recentProducts.filter((item) => item.id !== selected.id)}
+                products={recentProducts.filter(
+                  (item) => item.id !== selected.id,
+                )}
                 onOpen={openProduct}
                 onAdd={addToCart}
                 wishlist={wishlist}
@@ -1424,18 +1914,249 @@ export default function Home({
         )}
       </main>
 
-      <button className="nexora-guide-launcher" onClick={() => setGuideOpen(true)} aria-label="Open Nexora shopping guide" aria-expanded={guideOpen}>
-        <Sparkles aria-hidden="true" /><span>Ask Nexora</span>
+      <button
+        className="nexora-guide-launcher"
+        onClick={() => setGuideOpen(true)}
+        aria-label="Open Nexora shopping guide"
+        aria-expanded={guideOpen}
+      >
+        <Sparkles aria-hidden="true" />
+        <span>Ask Nexora</span>
       </button>
-      {guideOpen && <aside className="nexora-guide" role="dialog" aria-modal="false" aria-labelledby="nexora-guide-title">
-        <header><div><span><Sparkles aria-hidden="true" /></span><div><small>Explainable catalogue guidance</small><h2 id="nexora-guide-title">Nexora Guide</h2></div></div><button onClick={() => setGuideOpen(false)} aria-label="Close shopping guide"><X aria-hidden="true" /></button></header>
-        {visualPreview && <div className="guide-visual"><img src={visualPreview} alt="Uploaded product reference" /><button onClick={() => setVisualPreview("")}>Remove image</button></div>}
-        <div className="guide-answer" aria-live="polite"><Sparkles aria-hidden="true"/><p>{guideAnswer}</p></div>
-        <div className="guide-categories" aria-label="Product categories">{categories.slice(1, 7).map((item) => <button key={item} onClick={() => { setCategory(item); setGuideOpen(false); navigate("catalog"); }}>{item}</button>)}</div>
-        {recommendedProducts[0] && <button className="guide-recommendation" onClick={() => { setGuideOpen(false); openProduct(recommendedProducts[0]); }}><Image src={recommendedProducts[0].imageUrl} unoptimized alt="" width={54} height={54}/><span><small>From your shopping signals</small><b>{recommendedProducts[0].name}</b></span><ArrowRight aria-hidden="true"/></button>}
-        <form onSubmit={askGuide}><label htmlFor="guide-question" className="sr-only">Ask for product guidance</label><input id="guide-question" value={guideQuestion} onChange={(event) => setGuideQuestion(event.target.value)} placeholder="Try ‘phones under ₹50,000’"/><button type="submit" aria-label="Ask Nexora Guide"><ArrowRight aria-hidden="true"/></button></form>
-        <p className="guide-disclosure">Uses catalogue facts and your device-local shopping signals. It does not invent specifications or availability.</p>
-      </aside>}
+      {guideOpen && (
+        <aside
+          className="nexora-guide"
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby="nexora-guide-title"
+        >
+          <header>
+            <div>
+              <span>
+                {supportMode === "guide" ? (
+                  <Sparkles aria-hidden="true" />
+                ) : (
+                  <Headphones aria-hidden="true" />
+                )}
+              </span>
+              <div>
+                <small>
+                  {supportMode === "guide"
+                    ? "Explainable catalogue guidance"
+                    : "Protected customer support"}
+                </small>
+                <h2 id="nexora-guide-title">
+                  {supportMode === "guide" ? "Nexora Guide" : "Nexora Support"}
+                </h2>
+              </div>
+            </div>
+            <button
+              onClick={() => setGuideOpen(false)}
+              aria-label="Close support"
+            >
+              <X aria-hidden="true" />
+            </button>
+          </header>
+          <div className="support-mode-tabs" role="tablist">
+            <button
+              role="tab"
+              aria-selected={supportMode === "guide"}
+              onClick={() => setSupportMode("guide")}
+            >
+              <Sparkles />
+              Smart guide
+            </button>
+            <button
+              role="tab"
+              aria-selected={supportMode === "support"}
+              onClick={() =>
+                supportConversationId
+                  ? setSupportMode("support")
+                  : startSupportConversation()
+              }
+            >
+              <Headphones />
+              Message support
+            </button>
+          </div>
+          {supportMode === "guide" ? (
+            <>
+              {visualPreview && (
+                <div className="guide-visual">
+                  <img src={visualPreview} alt="Uploaded product reference" />
+                  <button onClick={() => setVisualPreview("")}>
+                    Remove image
+                  </button>
+                </div>
+              )}
+              <div className="guide-answer" aria-live="polite">
+                <Sparkles aria-hidden="true" />
+                <p>{guideAnswer}</p>
+              </div>
+              <div className="guide-categories" aria-label="Product categories">
+                {categories.slice(1, 7).map((item) => (
+                  <button
+                    key={item}
+                    onClick={() => {
+                      setCategory(item);
+                      setGuideOpen(false);
+                      navigate("catalog");
+                    }}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+              {recommendedProducts[0] && (
+                <button
+                  className="guide-recommendation"
+                  onClick={() => {
+                    setGuideOpen(false);
+                    openProduct(recommendedProducts[0]);
+                  }}
+                >
+                  <Image
+                    src={recommendedProducts[0].imageUrl}
+                    unoptimized
+                    alt=""
+                    width={54}
+                    height={54}
+                  />
+                  <span>
+                    <small>From your shopping signals</small>
+                    <b>{recommendedProducts[0].name}</b>
+                  </span>
+                  <ArrowRight aria-hidden="true" />
+                </button>
+              )}
+              <form onSubmit={askGuide}>
+                <label htmlFor="guide-question" className="sr-only">
+                  Ask for product guidance
+                </label>
+                <input
+                  id="guide-question"
+                  value={guideQuestion}
+                  onChange={(event) => setGuideQuestion(event.target.value)}
+                  placeholder="Try ‘phones under ₹50,000’"
+                />
+                <button type="submit" aria-label="Ask Nexora Guide">
+                  <ArrowRight aria-hidden="true" />
+                </button>
+              </form>
+              <p className="guide-disclosure">
+                Uses catalogue facts and your device-local shopping signals. It
+                does not invent specifications or availability.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="support-presence">
+                <i />
+                <span>
+                  <b>Support queue</b>
+                  <small>
+                    Messages are securely delivered. Human availability is
+                    confirmed only after an agent joins.
+                  </small>
+                </span>
+                <select
+                  value={supportLanguage}
+                  onChange={(event) =>
+                    setSupportLanguage(event.target.value as "en" | "ta" | "hi")
+                  }
+                  aria-label="Support language"
+                >
+                  <option value="en">English</option>
+                  <option value="ta">தமிழ்</option>
+                  <option value="hi">हिन्दी</option>
+                </select>
+              </div>
+              {!supportConversationId ? (
+                <div className="support-signin">
+                  <Headphones />
+                  <h3>
+                    {auth
+                      ? "Start a protected conversation"
+                      : "Sign in for customer support"}
+                  </h3>
+                  <p>
+                    Conversation history, orders and attachments stay linked to
+                    your verified account.
+                  </p>
+                  <button
+                    className="primary"
+                    disabled={supportBusy}
+                    onClick={startSupportConversation}
+                  >
+                    {auth ? "Start conversation" : "Sign in securely"}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="support-message-list" aria-live="polite">
+                    {supportMessages.map((message) => (
+                      <article
+                        key={message.id}
+                        className={message.sender_role.toLowerCase()}
+                      >
+                        <span>{message.body}</span>
+                        <small>
+                          {new Date(message.created_at).toLocaleTimeString(
+                            "en-IN",
+                            { hour: "2-digit", minute: "2-digit" },
+                          )}{" "}
+                          · {message.delivery_status.toLowerCase()}
+                        </small>
+                      </article>
+                    ))}
+                  </div>
+                  <form
+                    className="support-compose"
+                    onSubmit={sendSupportMessage}
+                  >
+                    <input
+                      ref={supportFileInput}
+                      className="visual-search-input"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,application/pdf"
+                      onChange={(event) =>
+                        uploadSupportFile(event.target.files?.[0])
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => supportFileInput.current?.click()}
+                      aria-label="Attach image or PDF"
+                    >
+                      <Paperclip />
+                    </button>
+                    <label htmlFor="support-message" className="sr-only">
+                      Message support
+                    </label>
+                    <input
+                      id="support-message"
+                      value={supportDraft}
+                      onChange={(event) => setSupportDraft(event.target.value)}
+                      placeholder="Write a message…"
+                      maxLength={4000}
+                    />
+                    <button
+                      type="submit"
+                      disabled={supportBusy || !supportDraft.trim()}
+                      aria-label="Send message"
+                    >
+                      <ArrowRight />
+                    </button>
+                  </form>
+                  <p className="guide-disclosure">
+                    {"Conversation history refreshes every few seconds. WebSocket presence and automated malware approval are not represented as active."}
+                  </p>
+                </>
+              )}
+            </>
+          )}
+        </aside>
+      )}
 
       <ProfessionalFooter
         onView={navigate}
@@ -1601,7 +2322,9 @@ function CheckoutView({
         confirm_close: true,
         ondismiss: () => {
           void cancelRazorpayPayment(created.orderNumber);
-          setError("Payment was cancelled. You can create a new secure attempt.");
+          setError(
+            "Payment was cancelled. You can create a new secure attempt.",
+          );
           setOrder(null);
         },
       },
@@ -1928,7 +2651,9 @@ function CheckoutView({
                   }}
                 />
                 <span>Secure online payment</span>
-                <small>UPI, cards, net banking and supported wallets via Razorpay</small>
+                <small>
+                  UPI, cards, net banking and supported wallets via Razorpay
+                </small>
               </label>
               <label
                 className={paymentMethod === "UPI" ? "selected-payment" : ""}
@@ -1976,8 +2701,8 @@ function CheckoutView({
                   : paymentMethod === "RAZORPAY"
                     ? `Pay securely · ${money.format(total)}`
                     : paymentMethod === "UPI"
-                    ? "Create UPI payment reference"
-                    : `Place COD order · ${money.format(total)}`}
+                      ? "Create UPI payment reference"
+                      : `Place COD order · ${money.format(total)}`}
               </button>
             )}
           </section>
@@ -2183,19 +2908,96 @@ function MobileMarketplaceToolbar({
   onBudget: (value: string) => void;
   onSort: (value: SortMode) => void;
 }) {
-  const brands = Array.from(new Set(products.filter((product) => product.categoryName === "Phones").map((product) => product.brand ?? product.name.split(" ")[0]))).sort();
+  const brands = Array.from(
+    new Set(
+      products
+        .filter((product) => product.categoryName === "Phones")
+        .map((product) => product.brand ?? product.name.split(" ")[0]),
+    ),
+  ).sort();
   return (
-    <section className="mobile-marketplace-toolbar" aria-label="Smartphone marketplace controls">
+    <section
+      className="mobile-marketplace-toolbar"
+      aria-label="Smartphone marketplace controls"
+    >
       <div className="mobile-marketplace-hero">
-        <div><span className="eyebrow">Nexora Mobile</span><h2>Find the right smartphone</h2><p>India-market models with source-backed details, clear pricing and configuration-aware shopping.</p></div>
-        <div className="mobile-marketplace-metrics"><span><b>{products.filter((product) => product.categoryName === "Phones").length}</b> verified listings</span><span><b>{brands.length}</b> represented brands</span><span><b>4</b> products per comparison</span></div>
+        <div>
+          <span className="eyebrow">Nexora Mobile</span>
+          <h2>Find the right smartphone</h2>
+          <p>
+            India-market models with source-backed details, clear pricing and
+            configuration-aware shopping.
+          </p>
+        </div>
+        <div className="mobile-marketplace-metrics">
+          <span>
+            <b>
+              {
+                products.filter((product) => product.categoryName === "Phones")
+                  .length
+              }
+            </b>{" "}
+            verified listings
+          </span>
+          <span>
+            <b>{brands.length}</b> represented brands
+          </span>
+          <span>
+            <b>4</b> products per comparison
+          </span>
+        </div>
       </div>
       <div className="mobile-filter-grid">
-        <label>Brand<select value={brand} onChange={(event) => onBrand(event.target.value)}><option>All brands</option>{brands.map((item) => <option key={item}>{item}</option>)}</select></label>
-        <label>Price<select value={budget} onChange={(event) => onBudget(event.target.value)}><option>All prices</option><option value="0-20000">Under ₹20,000</option><option value="20000-40000">₹20,000–₹40,000</option><option value="40000-70000">₹40,000–₹70,000</option><option value="70000-0">Above ₹70,000</option></select></label>
-        <label>Sort by<select value={sort} onChange={(event) => onSort(event.target.value as SortMode)}>{sortModes.map((mode) => <option value={mode} key={mode}>{sortLabels[mode]}</option>)}</select></label>
+        <label>
+          Brand
+          <select
+            value={brand}
+            onChange={(event) => onBrand(event.target.value)}
+          >
+            <option>All brands</option>
+            {brands.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Price
+          <select
+            value={budget}
+            onChange={(event) => onBudget(event.target.value)}
+          >
+            <option>All prices</option>
+            <option value="0-20000">Under ₹20,000</option>
+            <option value="20000-40000">₹20,000–₹40,000</option>
+            <option value="40000-70000">₹40,000–₹70,000</option>
+            <option value="70000-0">Above ₹70,000</option>
+          </select>
+        </label>
+        <label>
+          Sort by
+          <select
+            value={sort}
+            onChange={(event) => onSort(event.target.value as SortMode)}
+          >
+            {sortModes.map((mode) => (
+              <option value={mode} key={mode}>
+                {sortLabels[mode]}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
-      <div className="mobile-capability-strip" aria-label="Smartphone catalogue capabilities"><span>5G ready</span><span>Colour variants</span><span>Storage options</span><span>Official-source profiles</span><span>EMI estimate</span><span>Exchange eligibility</span></div>
+      <div
+        className="mobile-capability-strip"
+        aria-label="Smartphone catalogue capabilities"
+      >
+        <span>5G ready</span>
+        <span>Colour variants</span>
+        <span>Storage options</span>
+        <span>Official-source profiles</span>
+        <span>EMI estimate</span>
+        <span>Exchange eligibility</span>
+      </div>
     </section>
   );
 }
@@ -2235,30 +3037,84 @@ function GroceryMarketplace({
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const ranked = useMemo(() => {
     const copy = [...products];
-    if (activeTab === "Today's deals") return copy.sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0));
-    if (activeTab === "New arrivals") return copy.sort((a, b) => Number(Boolean(b.newArrival)) - Number(Boolean(a.newArrival)) || b.id - a.id);
-    if (activeTab === "Best sellers") return copy.sort((a, b) => Number(Boolean(b.bestSeller)) - Number(Boolean(a.bestSeller)) || b.reviews - a.reviews);
-    if (activeTab === "Top rated products") return copy.sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
-    if (activeTab === "Popular brands") return copy.sort((a, b) => (a.brand ?? "").localeCompare(b.brand ?? ""));
+    if (activeTab === "Today's deals")
+      return copy.sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0));
+    if (activeTab === "New arrivals")
+      return copy.sort(
+        (a, b) =>
+          Number(Boolean(b.newArrival)) - Number(Boolean(a.newArrival)) ||
+          b.id - a.id,
+      );
+    if (activeTab === "Best sellers")
+      return copy.sort(
+        (a, b) =>
+          Number(Boolean(b.bestSeller)) - Number(Boolean(a.bestSeller)) ||
+          b.reviews - a.reviews,
+      );
+    if (activeTab === "Top rated products")
+      return copy.sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
+    if (activeTab === "Popular brands")
+      return copy.sort((a, b) => (a.brand ?? "").localeCompare(b.brand ?? ""));
     return copy.sort((a, b) => b.reviews - a.reviews || b.rating - a.rating);
   }, [activeTab, products]);
-  const brands = Array.from(new Set(products.map((product) => product.brand).filter(Boolean))).slice(0, 10);
+  const brands = Array.from(
+    new Set(products.map((product) => product.brand).filter(Boolean)),
+  ).slice(0, 10);
 
   return (
-    <section className="grocery-marketplace wrap" aria-labelledby="grocery-marketplace-title">
+    <section
+      className="grocery-marketplace wrap"
+      aria-labelledby="grocery-marketplace-title"
+    >
       <div className="section-title">
-        <div><span className="eyebrow">Nexora Grocery</span><h2 id="grocery-marketplace-title">Fresh picks for every day</h2><p>Pantry, beverages, snacks, personal care and home essentials in one curated destination</p></div>
-        <button onClick={onAll}>Shop all grocery <span aria-hidden="true">→</span></button>
+        <div>
+          <span className="eyebrow">Nexora Grocery</span>
+          <h2 id="grocery-marketplace-title">Fresh picks for every day</h2>
+          <p>
+            Pantry, beverages, snacks, personal care and home essentials in one
+            curated destination
+          </p>
+        </div>
+        <button onClick={onAll}>
+          Shop all grocery <span aria-hidden="true">→</span>
+        </button>
       </div>
-      <div className="grocery-discovery-tabs" role="tablist" aria-label="Grocery collections">
-        {tabs.map((tab) => <button key={tab} role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? "active" : ""} onClick={() => setActiveTab(tab)}>{tab}</button>)}
+      <div
+        className="grocery-discovery-tabs"
+        role="tablist"
+        aria-label="Grocery collections"
+      >
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            role="tab"
+            aria-selected={activeTab === tab}
+            className={activeTab === tab ? "active" : ""}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
       <div className="grocery-brand-strip" aria-label="Popular grocery brands">
-        {brands.map((brand) => <button key={brand} onClick={() => setActiveTab("Popular brands")}>{brand}</button>)}
+        {brands.map((brand) => (
+          <button key={brand} onClick={() => setActiveTab("Popular brands")}>
+            {brand}
+          </button>
+        ))}
       </div>
       <div className="product-grid grocery-marketplace-grid">
         {ranked.slice(0, 4).map((product) => (
-          <ProductCard key={`${activeTab}-${product.id}`} product={product} onOpen={onOpen} onAdd={onAdd} liked={wishlist.includes(product.id)} onWishlist={onWishlist} compared={comparisonIds.includes(product.id)} onCompare={onCompare} />
+          <ProductCard
+            key={`${activeTab}-${product.id}`}
+            product={product}
+            onOpen={onOpen}
+            onAdd={onAdd}
+            liked={wishlist.includes(product.id)}
+            onWishlist={onWishlist}
+            compared={comparisonIds.includes(product.id)}
+            onCompare={onCompare}
+          />
         ))}
       </div>
     </section>
@@ -2291,12 +3147,16 @@ function ProductCard({
     (product.discount ?? 0) >= 30 ? "Limited offer" : null,
     product.rating >= 4.4 ? "Top rated" : null,
     product.stockQuantity > 0 ? "Fast delivery" : null,
-  ].filter(Boolean).slice(0, 2) as string[];
+  ]
+    .filter(Boolean)
+    .slice(0, 2) as string[];
 
   async function shareProduct() {
     const url = `${window.location.origin}/products/${productSlug(product.name)}`;
     if (navigator.share) {
-      await navigator.share({ title: product.name, url }).catch(() => undefined);
+      await navigator
+        .share({ title: product.name, url })
+        .catch(() => undefined);
     } else {
       await navigator.clipboard?.writeText(url);
     }
@@ -2308,9 +3168,11 @@ function ProductCard({
     >
       <div className="product-image" onClick={() => onOpen(product)}>
         <div className="grocery-badge-rail">
-          {(marketplaceBadges.length ? marketplaceBadges : [product.badge]).filter(Boolean).map((badge) => (
-            <span key={badge}>{badge}</span>
-          ))}
+          {(marketplaceBadges.length ? marketplaceBadges : [product.badge])
+            .filter(Boolean)
+            .map((badge) => (
+              <span key={badge}>{badge}</span>
+            ))}
         </div>
         <button
           className={liked ? "liked" : ""}
@@ -2371,15 +3233,22 @@ function ProductCard({
         {product.categoryName === "Grocery" && (
           <div className="grocery-delivery">
             {product.stockQuantity > 0
-              ? product.shipping ?? "Delivery estimate shown at checkout"
+              ? (product.shipping ?? "Delivery estimate shown at checkout")
               : "Availability confirmed after delivery-location check"}
           </div>
         )}
         {product.categoryName === "Phones" && (
           <div className="mobile-commerce-details">
-            <span><b>EMI</b> from {money.format(Math.ceil(product.price / 12))}/month</span>
-            <span><b>Exchange</b> eligibility checked at checkout</span>
-            <span><b>Delivery</b> free · PIN-code estimate available</span>
+            <span>
+              <b>EMI</b> from {money.format(Math.ceil(product.price / 12))}
+              /month
+            </span>
+            <span>
+              <b>Exchange</b> eligibility checked at checkout
+            </span>
+            <span>
+              <b>Delivery</b> free · PIN-code estimate available
+            </span>
           </div>
         )}
         <div className="card-bottom">
@@ -2413,9 +3282,19 @@ function ProductCard({
         )}
         {product.categoryName === "Phones" && (
           <div className="mobile-card-actions">
-            <button className="quick-view" onClick={() => onOpen(product)}>Quick view</button>
-            <button className="quick-add" onClick={() => onAdd(product)} disabled={product.stockQuantity < 1}>Add to bag</button>
-            <button className="quick-share" onClick={shareProduct}>Share</button>
+            <button className="quick-view" onClick={() => onOpen(product)}>
+              Quick view
+            </button>
+            <button
+              className="quick-add"
+              onClick={() => onAdd(product)}
+              disabled={product.stockQuantity < 1}
+            >
+              Add to bag
+            </button>
+            <button className="quick-share" onClick={shareProduct}>
+              Share
+            </button>
           </div>
         )}
         {product.categoryName === "Grocery" && (
@@ -2431,7 +3310,11 @@ function ProductCard({
             >
               {product.stockQuantity > 0 ? "Quick add" : "Check availability"}
             </button>
-            <button className="quick-share" onClick={shareProduct} aria-label={`Share ${product.name}`}>
+            <button
+              className="quick-share"
+              onClick={shareProduct}
+              aria-label={`Share ${product.name}`}
+            >
               Share
             </button>
           </div>
@@ -2456,21 +3339,72 @@ function ComparisonView({
 }) {
   const rows = useMemo(() => {
     const core = [
-      { label: "Brand", values: products.map((product) => getProductProfile(product.id)?.brand ?? product.name.split(" ")[0]) },
-      { label: "Price", values: products.map((product) => money.format(product.price)) },
-      { label: "Rating", values: products.map((product) => product.reviews > 0 ? `${product.rating} ★ (${product.reviews})` : "New listing") },
-      { label: "Features", values: products.map((product) => getProductProfile(product.id)?.highlights.slice(0, 3).join(" · ") ?? product.description) },
-      { label: "Dimensions", values: products.map((product) => findSpecification(product, "Dimensions")) },
-      { label: "Warranty", values: products.map((product) => getProductProfile(product.id)?.warranty ?? "Manufacturer warranty details pending verification") },
-      { label: "Availability", values: products.map((product) => product.stockQuantity > 0 ? `In stock · ${product.stockQuantity} units` : "Out of stock") },
+      {
+        label: "Brand",
+        values: products.map(
+          (product) =>
+            getProductProfile(product.id)?.brand ?? product.name.split(" ")[0],
+        ),
+      },
+      {
+        label: "Price",
+        values: products.map((product) => money.format(product.price)),
+      },
+      {
+        label: "Rating",
+        values: products.map((product) =>
+          product.reviews > 0
+            ? `${product.rating} ★ (${product.reviews})`
+            : "New listing",
+        ),
+      },
+      {
+        label: "Features",
+        values: products.map(
+          (product) =>
+            getProductProfile(product.id)?.highlights.slice(0, 3).join(" · ") ??
+            product.description,
+        ),
+      },
+      {
+        label: "Dimensions",
+        values: products.map((product) =>
+          findSpecification(product, "Dimensions"),
+        ),
+      },
+      {
+        label: "Warranty",
+        values: products.map(
+          (product) =>
+            getProductProfile(product.id)?.warranty ??
+            "Manufacturer warranty details pending verification",
+        ),
+      },
+      {
+        label: "Availability",
+        values: products.map((product) =>
+          product.stockQuantity > 0
+            ? `In stock · ${product.stockQuantity} units`
+            : "Out of stock",
+        ),
+      },
     ];
-    const specificationLabels = Array.from(new Set(products.flatMap((product) =>
-      (getProductProfile(product.id)?.specifications ?? []).flatMap((group) => group.items.map((item) => item.label)),
-    ))).slice(0, 8);
-    return [...core, ...specificationLabels.map((label) => ({
-      label,
-      values: products.map((product) => findSpecification(product, label)),
-    }))];
+    const specificationLabels = Array.from(
+      new Set(
+        products.flatMap((product) =>
+          (getProductProfile(product.id)?.specifications ?? []).flatMap(
+            (group) => group.items.map((item) => item.label),
+          ),
+        ),
+      ),
+    ).slice(0, 8);
+    return [
+      ...core,
+      ...specificationLabels.map((label) => ({
+        label,
+        values: products.map((product) => findSpecification(product, label)),
+      })),
+    ];
   }, [products]);
 
   if (products.length === 0)
@@ -2488,28 +3422,79 @@ function ComparisonView({
   return (
     <section className="comparison-page wrap page-enter">
       <div className="page-heading">
-        <div><span className="eyebrow">Decision workspace</span><h1>Compare products</h1><p>{products.length} of 4 products selected</p></div>
-        <button className="filter-button" onClick={onShop}>Add another product</button>
+        <div>
+          <span className="eyebrow">Decision workspace</span>
+          <h1>Compare products</h1>
+          <p>{products.length} of 4 products selected</p>
+        </div>
+        <button className="filter-button" onClick={onShop}>
+          Add another product
+        </button>
       </div>
-      <div className="comparison-scroll" tabIndex={0} aria-label="Product comparison table">
-        <div className="enterprise-comparison" style={{ "--comparison-count": products.length } as React.CSSProperties}>
-          <div className="comparison-label comparison-product-label">Product</div>
+      <div
+        className="comparison-scroll"
+        tabIndex={0}
+        aria-label="Product comparison table"
+      >
+        <div
+          className="enterprise-comparison"
+          style={
+            { "--comparison-count": products.length } as React.CSSProperties
+          }
+        >
+          <div className="comparison-label comparison-product-label">
+            Product
+          </div>
           {products.map((product) => (
             <article className="comparison-product" key={product.id}>
-              <button className="comparison-remove" onClick={() => onRemove(product.id)} aria-label={`Remove ${product.name}`}>×</button>
-              <button className="comparison-image" onClick={() => onOpen(product)}>
-                <Image src={product.imageUrl} unoptimized alt={product.name} width={420} height={420} sizes="(max-width: 760px) 70vw, 24vw" />
+              <button
+                className="comparison-remove"
+                onClick={() => onRemove(product.id)}
+                aria-label={`Remove ${product.name}`}
+              >
+                ×
               </button>
-              <button className="product-name" onClick={() => onOpen(product)}>{product.name}</button>
-              <button className="primary" onClick={() => onAdd(product)} disabled={product.stockQuantity < 1}>Add to bag</button>
+              <button
+                className="comparison-image"
+                onClick={() => onOpen(product)}
+              >
+                <Image
+                  src={product.imageUrl}
+                  unoptimized
+                  alt={product.name}
+                  width={420}
+                  height={420}
+                  sizes="(max-width: 760px) 70vw, 24vw"
+                />
+              </button>
+              <button className="product-name" onClick={() => onOpen(product)}>
+                {product.name}
+              </button>
+              <button
+                className="primary"
+                onClick={() => onAdd(product)}
+                disabled={product.stockQuantity < 1}
+              >
+                Add to bag
+              </button>
             </article>
           ))}
           {rows.map((row) => {
             const different = new Set(row.values).size > 1;
             return (
               <div className="comparison-row" key={row.label}>
-                <div className="comparison-label">{row.label}{different && <small>Different</small>}</div>
-                {row.values.map((value, index) => <div className={different ? "difference" : ""} key={`${row.label}-${products[index].id}`}>{value}</div>)}
+                <div className="comparison-label">
+                  {row.label}
+                  {different && <small>Different</small>}
+                </div>
+                {row.values.map((value, index) => (
+                  <div
+                    className={different ? "difference" : ""}
+                    key={`${row.label}-${products[index].id}`}
+                  >
+                    {value}
+                  </div>
+                ))}
               </div>
             );
           })}
@@ -2520,8 +3505,8 @@ function ComparisonView({
 }
 
 function findSpecification(product: Product, label: string) {
-  const item = getProductProfile(product.id)?.specifications
-    .flatMap((group) => group.items)
+  const item = getProductProfile(product.id)
+    ?.specifications.flatMap((group) => group.items)
     .find((candidate) => candidate.label.toLowerCase() === label.toLowerCase());
   return item?.value ?? "Not published";
 }
@@ -2802,6 +3787,7 @@ function AdminView({
         </div>
       ) : (
         <>
+          <AdminSupportPanel />
           <AdminMobileImportPanel />
           <AdminPaymentPanel auth={auth} />
           <AdminQuestionPanel auth={auth} />
@@ -2960,33 +3946,304 @@ function AdminView({
   );
 }
 
+function AdminSupportPanel() {
+  const [queue, setQueue] = useState<
+    Array<{
+      id: string;
+      customer_name: string;
+      customer_email: string;
+      status: string;
+      intent: string;
+      subject: string;
+      last_message_at: string;
+    }>
+  >([]);
+  const [selected, setSelected] = useState<string>("");
+  const [detail, setDetail] = useState<{
+    messages?: SupportMessage[];
+    conversation?: Record<string, unknown>;
+    orders?: Array<Record<string, unknown>>;
+  } | null>(null);
+  const [reply, setReply] = useState("");
+  const [loading, setLoading] = useState(true);
+  async function loadQueue() {
+    try {
+      const response = await fetch("/api/site/admin/support", {
+        cache: "no-store",
+      });
+      if (response.ok) {
+        const body = (await response.json()) as { queue: typeof queue };
+        setQueue(body.queue);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+  async function loadDetail(id: string) {
+    setSelected(id);
+    const response = await fetch(
+      `/api/site/admin/support?conversationId=${encodeURIComponent(id)}`,
+      { cache: "no-store" },
+    );
+    if (response.ok) setDetail(await response.json());
+  }
+  async function action(
+    actionName: string,
+    extra: Record<string, string> = {},
+  ) {
+    if (!selected) return;
+    const response = await fetch("/api/site/admin/support", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        conversationId: selected,
+        action: actionName,
+        ...extra,
+      }),
+    });
+    if (response.ok) {
+      setReply("");
+      await loadDetail(selected);
+      await loadQueue();
+    }
+  }
+  useEffect(() => {
+    loadQueue();
+    const timer = window.setInterval(loadQueue, 8000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return (
+    <section className="payment-admin admin-support">
+      <div className="section-heading">
+        <div>
+          <span className="eyebrow">Customer care operations</span>
+          <h2>Support queue</h2>
+          <p>
+            Protected conversations, agent handover and customer order context.
+          </p>
+        </div>
+        <span className="verification-pill">{queue.length} open</span>
+      </div>
+      <div className="admin-support-layout">
+        <div className="support-queue">
+          {loading ? (
+            <p>Loading queue…</p>
+          ) : queue.length ? (
+            queue.map((item) => (
+              <button
+                key={item.id}
+                className={selected === item.id ? "active" : ""}
+                onClick={() => loadDetail(item.id)}
+              >
+                <span>
+                  <b>{item.customer_name}</b>
+                  <small>{item.subject || item.intent}</small>
+                </span>
+                <em>{item.status.replaceAll("_", " ")}</em>
+              </button>
+            ))
+          ) : (
+            <p>No conversations are waiting.</p>
+          )}
+        </div>
+        <div className="support-workspace">
+          {!detail ? (
+            <div className="admin-empty">
+              Select a conversation to review its history.
+            </div>
+          ) : (
+            <>
+              <div className="support-agent-head">
+                <span>
+                  <b>
+                    {String(detail.conversation?.customer_name ?? "Customer")}
+                  </b>
+                  <small>
+                    {String(detail.conversation?.customer_email ?? "")}
+                  </small>
+                </span>
+                <button onClick={() => action("JOIN")}>
+                  Join conversation
+                </button>
+              </div>
+              <div className="support-agent-messages">
+                {detail.messages?.map((message) => (
+                  <p
+                    key={message.id}
+                    className={message.sender_role.toLowerCase()}
+                  >
+                    <b>{message.sender_role}</b>
+                    <span>{message.body}</span>
+                    <small>
+                      {new Date(message.created_at).toLocaleString("en-IN")}
+                    </small>
+                  </p>
+                ))}
+              </div>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  action("MESSAGE", { message: reply });
+                }}
+              >
+                <input
+                  value={reply}
+                  onChange={(event) => setReply(event.target.value)}
+                  placeholder="Reply to customer"
+                />
+              <button className="primary" type="submit" disabled={!reply.trim()}>
+                  Send
+                </button>
+              </form>
+              <div className="support-admin-actions">
+                <button
+                  onClick={() => {
+                    const note = window.prompt("Internal note");
+                    if (note) action("NOTE", { note });
+                  }}
+                >
+                  Add internal note
+                </button>
+                <button
+                  onClick={() => action("STATUS", { status: "RESOLVED" })}
+                >
+                  Resolve
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function AdminMobileImportPanel() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ total: number; inserted: number; updated: number; rejected: number; errors?: Array<{ rowNumber: number; message: string }>; publication?: string } | null>(null);
+  const [result, setResult] = useState<{
+    total: number;
+    inserted: number;
+    updated: number;
+    rejected: number;
+    errors?: Array<{ rowNumber: number; message: string }>;
+    publication?: string;
+  } | null>(null);
   const [error, setError] = useState("");
 
   async function upload(event: React.FormEvent) {
     event.preventDefault();
-    if (!file) { setError("Choose a CSV, Excel, or JSON file."); return; }
-    setBusy(true); setError(""); setResult(null);
+    if (!file) {
+      setError("Choose a CSV, Excel, or JSON file.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setResult(null);
     try {
-      const form = new FormData(); form.append("file", file);
-      const response = await fetch("/api/site/admin/mobile-import", { method: "POST", body: form });
-      const body = await response.json() as typeof result & { message?: string };
-      if (!response.ok && response.status !== 207) throw new Error(body?.message || "Import failed.");
+      const form = new FormData();
+      form.append("file", file);
+      const response = await fetch("/api/site/admin/mobile-import", {
+        method: "POST",
+        body: form,
+      });
+      const body = (await response.json()) as typeof result & {
+        message?: string;
+      };
+      if (!response.ok && response.status !== 207)
+        throw new Error(body?.message || "Import failed.");
       setResult(body);
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "Import failed."); }
-    finally { setBusy(false); }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Import failed.");
+    } finally {
+      setBusy(false);
+    }
   }
 
-  return <section className="payment-admin mobile-import-admin">
-    <div className="section-heading"><div><span className="eyebrow">Verified smartphone registry</span><h2>Bulk model import</h2><p>Import up to 10,000 source-backed models per job. CSV, Excel, JSON, and authenticated JSON API requests use the same validation pipeline.</p></div><a className="account-link secondary" href="/api/site/admin/mobile-import">Download template</a></div>
-    <div className="verification-rules"><b>Publication guard</b><span>Every model needs official identity, India availability, specification sources, and a verification date.</span><span>Price, stock, ratings, reviews, offers, and delivery are never generated.</span><span>Successful imports remain Draft until publication checks are complete.</span></div>
-    <form className="mobile-import-form" onSubmit={upload}><label className="upload-drop"><input type="file" accept=".csv,.xlsx,.xls,.json" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><span>{file ? file.name : "Choose catalog file"}</span><small>CSV, XLSX, XLS, or JSON · maximum 20 MB</small></label><button className="primary" type="submit" disabled={busy}>{busy ? "Validating and importing…" : "Validate & import"}</button></form>
-    {error && <p className="form-error" role="alert">{error}</p>}
-    {result && <div className="import-result" role="status"><div><b>{result.total}</b><small>Rows checked</small></div><div><b>{result.inserted}</b><small>Inserted</small></div><div><b>{result.updated}</b><small>Updated</small></div><div><b>{result.rejected}</b><small>Rejected</small></div>{result.publication && <p>{result.publication}</p>}{result.errors?.length ? <details><summary>Review first {result.errors.length} errors</summary><ul>{result.errors.map((item, index) => <li key={`${item.rowNumber}-${index}`}>Row {item.rowNumber}: {item.message}</li>)}</ul></details> : null}</div>}
-  </section>;
+  return (
+    <section className="payment-admin mobile-import-admin">
+      <div className="section-heading">
+        <div>
+          <span className="eyebrow">Verified smartphone registry</span>
+          <h2>Bulk model import</h2>
+          <p>
+            Import up to 10,000 source-backed models per job. CSV, Excel, JSON,
+            and authenticated JSON API requests use the same validation
+            pipeline.
+          </p>
+        </div>
+        <a
+          className="account-link secondary"
+          href="/api/site/admin/mobile-import"
+        >
+          Download template
+        </a>
+      </div>
+      <div className="verification-rules">
+        <b>Publication guard</b>
+        <span>
+          Every model needs official identity, India availability, specification
+          sources, and a verification date.
+        </span>
+        <span>{"Price, stock, ratings, reviews, offers, and delivery are never generated."}</span>
+        <span>
+          Successful imports remain Draft until publication checks are complete.
+        </span>
+      </div>
+      <form className="mobile-import-form" onSubmit={upload}>
+        <label className="upload-drop">
+          <input
+            type="file"
+            accept=".csv,.xlsx,.xls,.json"
+            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+          />
+          <span>{file ? file.name : "Choose catalog file"}</span>
+          <small>CSV, XLSX, XLS, or JSON · maximum 20 MB</small>
+        </label>
+        <button className="primary" type="submit" disabled={busy}>
+          {busy ? "Validating and importing…" : "Validate & import"}
+        </button>
+      </form>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      {result && (
+        <div className="import-result" role="status">
+          <div>
+            <b>{result.total}</b>
+            <small>Rows checked</small>
+          </div>
+          <div>
+            <b>{result.inserted}</b>
+            <small>Inserted</small>
+          </div>
+          <div>
+            <b>{result.updated}</b>
+            <small>Updated</small>
+          </div>
+          <div>
+            <b>{result.rejected}</b>
+            <small>Rejected</small>
+          </div>
+          {result.publication && <p>{result.publication}</p>}
+          {result.errors?.length ? (
+            <details>
+              <summary>Review first {result.errors.length} errors</summary>
+              <ul>
+                {result.errors.map((item, index) => (
+                  <li key={`${item.rowNumber}-${index}`}>
+                    Row {item.rowNumber}: {item.message}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
 }
 
 function AdminPaymentPanel({ auth }: { auth: AuthSession }) {
