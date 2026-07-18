@@ -110,6 +110,7 @@ function toProduct(row: CatalogRow) {
     imageUrl: row.image_url.replace(/\.webp$/i, ".jpg"),
     categoryName: row.category_name,
     subcategoryName: row.subcategory_name,
+    verificationStatus: row.verification_status,
     rating: row.rating_tenths / 10,
     reviews: row.review_count,
     colour: row.colour ?? undefined,

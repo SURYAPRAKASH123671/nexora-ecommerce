@@ -10,6 +10,15 @@ export type Product = {
   rating: number;
   reviews: number;
   badge?: string;
+  brand?: string;
+  subcategoryName?: string;
+  size?: string;
+  discount?: number;
+  newArrival?: boolean;
+  bestSeller?: boolean;
+  shipping?: string;
+  returnPolicy?: string;
+  verificationStatus?: string;
 };
 
 type ProductSeed = [name: string, description: string, price: number, previousPrice?: number, badge?: string];

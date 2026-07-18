@@ -222,6 +222,52 @@ test("Open Prices migration contains unique factual India grocery listings", asy
   assert.doesNotMatch(migration, /'OPEN_DATA_VERIFIED', [1-9]\d*, [1-9]\d*/);
 });
 
+test("premium grocery catalogue uses unique factual records and 1200px local media", async () => {
+  const manifest = JSON.parse(
+    await readFile(new URL("../premium-grocery-source.json", import.meta.url), "utf8"),
+  );
+  const migration = await readFile(
+    new URL("../drizzle/0006_premium_grocery_catalog.sql", import.meta.url),
+    "utf8",
+  );
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.equal(manifest.records.length, 64);
+  assert.equal(new Set(manifest.records.map((item) => item.sourceId)).size, 64);
+  assert.equal(new Set(manifest.records.map((item) => item.imagePath)).size, 64);
+  assert.equal(new Set(manifest.records.map((item) => item.brand)).size, 33);
+  assert.match(migration, /DELETE FROM catalog_products WHERE category_name = 'Grocery'/);
+  assert.equal((migration.match(/^INSERT INTO catalog_products/gm) ?? []).length, 64);
+  assert.doesNotMatch(migration, /'RETAILER_CATALOG_VERIFIED', [^,]+, [^,]+, '[^']+', [^,]+, [^,]+, [^,]+, [^,]+, [1-9]\d*,/);
+  assert.match(page, /grocery-card/);
+  assert.match(page, /Check availability/);
+
+  for (const item of manifest.records) {
+    const image = await readFile(
+      new URL(`../public${item.imagePath}`, import.meta.url),
+    );
+    const dimensions = jpegDimensions(image);
+    assert.deepEqual(dimensions, { width: 1200, height: 1200 }, item.imagePath);
+  }
+});
+
+function jpegDimensions(buffer) {
+  let offset = 2;
+  while (offset < buffer.length) {
+    if (buffer[offset] !== 0xff) break;
+    const marker = buffer[offset + 1];
+    const length = buffer.readUInt16BE(offset + 2);
+    if ([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
+      return {
+        height: buffer.readUInt16BE(offset + 5),
+        width: buffer.readUInt16BE(offset + 7),
+      };
+    }
+    offset += 2 + length;
+  }
+  throw new Error("JPEG dimensions not found");
+}
+
 test("public crawler routes and sitemap expose dedicated product and policy pages", async () => {
   const home = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const productRoute = await readFile(new URL("../app/products/[slug]/page.tsx", import.meta.url), "utf8");

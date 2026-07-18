@@ -961,6 +961,24 @@ export default function Home({
                 </p>
               </div>
             </div>
+            {category === "Grocery" && (
+              <div className="grocery-collection-banner">
+                <div>
+                  <span className="eyebrow">Nexora pantry</span>
+                  <h2>Everyday essentials, professionally presented</h2>
+                  <p>
+                    Curated India-market products with retailer-sourced pack
+                    details, consistent 1200 × 1200 imagery and transparent
+                    availability checks.
+                  </p>
+                </div>
+                <ul aria-label="Grocery catalogue standards">
+                  <li>64 genuine products</li>
+                  <li>33 familiar brands</li>
+                  <li>Verified pack sizes</li>
+                </ul>
+              </div>
+            )}
             <div className="filter-chips" aria-label="Filter by category">
               {categories.map((item) => (
                 <button
@@ -1929,9 +1947,15 @@ function ProductCard({
   onCompare?: (id: number) => void;
 }) {
   return (
-    <article className="product-card">
+    <article
+      className={`product-card${product.categoryName === "Grocery" ? " grocery-card" : ""}`}
+    >
       <div className="product-image" onClick={() => onOpen(product)}>
-        {product.badge && <span>{product.badge}</span>}
+        {(product.badge || (product.discount ?? 0) > 0) && (
+          <span>
+            {product.badge ?? `${product.discount}% off`}
+          </span>
+        )}
         <button
           className={liked ? "liked" : ""}
           onClick={(event) => {
@@ -1969,18 +1993,32 @@ function ProductCard({
             </button>
           )}
         </div>
+        {product.categoryName === "Grocery" && product.brand && (
+          <div className="grocery-brand">{product.brand}</div>
+        )}
         <button className="product-name" onClick={() => onOpen(product)}>
           {product.name}
         </button>
+        {product.categoryName === "Grocery" && product.size && (
+          <div className="grocery-size">{product.size}</div>
+        )}
         <div className="rating">
           {product.reviews > 0 ? (
             <>
-              ★ {product.rating} <span>({product.reviews})</span>
+              ★ {product.rating}{" "}
+              <span>({product.reviews.toLocaleString("en-IN")} ratings)</span>
             </>
           ) : (
             <span>New listing · no verified reviews</span>
           )}
         </div>
+        {product.categoryName === "Grocery" && (
+          <div className="grocery-delivery">
+            {product.stockQuantity > 0
+              ? product.shipping ?? "Delivery estimate shown at checkout"
+              : "Availability confirmed after delivery-location check"}
+          </div>
+        )}
         <div className="card-bottom">
           <div>
             <strong>{money.format(product.price)}</strong>
@@ -1997,6 +2035,21 @@ function ProductCard({
             {product.stockQuantity < 1 ? "×" : "+"}
           </button>
         </div>
+        {product.categoryName === "Grocery" && (
+          <div className="grocery-quick-actions">
+            <button className="quick-view" onClick={() => onOpen(product)}>
+              Quick view
+            </button>
+            <button
+              className="quick-add"
+              onClick={() =>
+                product.stockQuantity > 0 ? onAdd(product) : onOpen(product)
+              }
+            >
+              {product.stockQuantity > 0 ? "Quick add" : "Check availability"}
+            </button>
+          </div>
+        )}
       </div>
     </article>
   );
