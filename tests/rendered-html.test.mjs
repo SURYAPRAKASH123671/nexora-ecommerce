@@ -364,3 +364,21 @@ test("worker applies production security and private-route crawler headers", asy
   assert.match(worker, /X-Robots-Tag/);
   assert.match(worker, /noindex, nofollow/);
 });
+
+test("global polish system covers accessibility, motion and resilient route states", async () => {
+  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
+  const polish = await readFile(new URL("../app/polish.css", import.meta.url), "utf8");
+  const notFound = await readFile(new URL("../app/not-found.tsx", import.meta.url), "utf8");
+  const error = await readFile(new URL("../app/error.tsx", import.meta.url), "utf8");
+  const loading = await readFile(new URL("../app/loading.tsx", import.meta.url), "utf8");
+
+  assert.match(layout, /polish\.css/);
+  assert.match(polish, /prefers-reduced-motion/);
+  assert.match(polish, /focus-visible/);
+  assert.match(polish, /touch-action: manipulation/);
+  assert.match(polish, /polish-heart/);
+  assert.match(polish, /polish-dialog/);
+  assert.match(notFound, /Error 404/);
+  assert.match(error, /Try again/);
+  assert.match(loading, /aria-busy="true"/);
+});
