@@ -46,6 +46,7 @@ export const categories = [
   "Personal Care",
   "Gaming",
   "Lifestyle",
+  "Grocery",
 ];
 
 export const fallbackProducts: Product[] = [

@@ -202,3 +202,22 @@ test("catalog API upgrades media paths and provides indexed server pagination", 
   assert.match(migration, /UPDATE `product_variants`/);
   assert.match(migration, /UPDATE `product_media`/);
 });
+
+test("Open Prices migration contains unique factual India grocery listings", async () => {
+  const migration = await readFile(
+    new URL("../drizzle/0005_open_prices_india_catalog.sql", import.meta.url),
+    "utf8",
+  );
+  const inserts = migration.match(/^INSERT OR IGNORE INTO catalog_products/gm) ?? [];
+  const skus = [...migration.matchAll(/'OFF-(\d+)'/g)].map((match) => match[1]);
+  const images = [...migration.matchAll(/'(https:\/\/images\.openfoodfacts\.org\/[^']+)'/g)].map(
+    (match) => match[1],
+  );
+
+  assert.ok(inserts.length >= 200, `expected at least 200 validated listings, found ${inserts.length}`);
+  assert.equal(new Set(skus).size, inserts.length);
+  assert.equal(new Set(images).size, inserts.length);
+  assert.match(migration, /'Grocery'/);
+  assert.match(migration, /'OPEN_DATA_VERIFIED'/);
+  assert.doesNotMatch(migration, /'OPEN_DATA_VERIFIED', [1-9]\d*, [1-9]\d*/);
+});
