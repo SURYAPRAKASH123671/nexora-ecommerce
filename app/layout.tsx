@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "./premium-product.css";
 import "./support-pages.css";
+import "./enterprise.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
@@ -17,6 +18,9 @@ export const metadata: Metadata = {
   title: "Nexora — Thoughtfully chosen",
   description:
     "A premium commerce experience for technology and lifestyle essentials.",
+  applicationName: "Nexora Commerce",
+  manifest: "/manifest.webmanifest",
+  alternates: { canonical: "https://nexora-web-virid.vercel.app" },
   openGraph: {
     title: "Nexora — Thoughtfully chosen",
     description:
@@ -45,6 +49,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "OnlineStore",
+              name: "Nexora Commerce",
+              url: "https://nexora-web-virid.vercel.app",
+              email: "suryakannan32123@gmail.com",
+              telephone: "+91 9150357320",
+              areaServed: "IN",
+            }),
+          }}
+        />
         {children}
       </body>
     </html>

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://nexora-web-virid.vercel.app/sitemap.xml

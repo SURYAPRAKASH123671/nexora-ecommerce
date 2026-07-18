@@ -108,6 +108,11 @@ export default function Home() {
   const [sortMode, setSortMode] = useState<SortMode>("recommended");
   const [auth, setAuth] = useState<AuthSession | null>(null);
   const [infoPage, setInfoPage] = useState<InfoPage>("help-centre");
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [darkMode, setDarkMode] = useState(false);
+  const [preferencesReady, setPreferencesReady] = useState(false);
+  const [recentlyViewed, setRecentlyViewed] = useState<number[]>([]);
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   useEffect(() => {
     const pages: InfoPage[] = [
@@ -154,6 +159,55 @@ export default function Home() {
           ? `Professional ${titles[infoPage]} information from Nexora Commerce India.`
           : "A premium commerce experience for technology and lifestyle essentials.";
   }, [view, infoPage]);
+
+  useEffect(() => {
+    try {
+      const savedCart = JSON.parse(localStorage.getItem("nexora-cart") ?? "[]");
+      const savedWishlist = JSON.parse(
+        localStorage.getItem("nexora-wishlist") ?? "[]",
+      );
+      const savedRecent = JSON.parse(
+        localStorage.getItem("nexora-recent") ?? "[]",
+      );
+      if (Array.isArray(savedCart)) setCart(savedCart);
+      if (Array.isArray(savedWishlist)) setWishlist(savedWishlist);
+      if (Array.isArray(savedRecent)) setRecentlyViewed(savedRecent);
+      setDarkMode(localStorage.getItem("nexora-theme") === "dark");
+    } catch {
+      localStorage.removeItem("nexora-cart");
+      localStorage.removeItem("nexora-wishlist");
+      localStorage.removeItem("nexora-recent");
+    } finally {
+      setPreferencesReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!preferencesReady) return;
+    localStorage.setItem("nexora-cart", JSON.stringify(cart));
+    localStorage.setItem("nexora-wishlist", JSON.stringify(wishlist));
+    localStorage.setItem("nexora-recent", JSON.stringify(recentlyViewed));
+    localStorage.setItem("nexora-theme", darkMode ? "dark" : "light");
+    document.documentElement.dataset.theme = darkMode ? "dark" : "light";
+  }, [cart, wishlist, recentlyViewed, darkMode, preferencesReady]);
+
+  useEffect(() => {
+    const timer = window.setInterval(
+      () => setHeroIndex((current) => (current + 1) % 4),
+      5200,
+    );
+    const onScroll = () => setShowBackToTop(window.scrollY > 700);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator)
+      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -220,6 +274,20 @@ export default function Home() {
   );
   const shipping = subtotal > 5000 || subtotal === 0 ? 0 : 99;
   const total = subtotal + shipping;
+  const currentHero = products[heroIndex % Math.min(4, products.length)];
+  const recentProducts = recentlyViewed
+    .map((id) => products.find((product) => product.id === id))
+    .filter((product): product is Product => Boolean(product))
+    .slice(0, 4);
+  const searchSuggestions = query.trim()
+    ? products
+        .filter((product) =>
+          `${product.name} ${product.categoryName}`
+            .toLowerCase()
+            .includes(query.trim().toLowerCase()),
+        )
+        .slice(0, 5)
+    : [];
 
   function navigate(next: View) {
     setView(next);
@@ -237,6 +305,10 @@ export default function Home() {
 
   function openProduct(product: Product) {
     setSelected(product);
+    setRecentlyViewed((current) => [
+      product.id,
+      ...current.filter((id) => id !== product.id),
+    ].slice(0, 12));
     navigate("product");
   }
 
@@ -308,7 +380,7 @@ export default function Home() {
   }
 
   return (
-    <div className="site-shell">
+    <div className={`site-shell${darkMode ? " dark" : ""}`}>
       <a className="skip-link" href="#main">
         Skip to content
       </a>
@@ -340,8 +412,35 @@ export default function Home() {
               ×
             </button>
           )}
+          {searchSuggestions.length > 0 && (
+            <div className="search-suggestions" role="listbox" aria-label="Search suggestions">
+              <small>Suggested products</small>
+              {searchSuggestions.map((product) => (
+                <button
+                  type="button"
+                  key={product.id}
+                  onClick={() => {
+                    setQuery(product.name);
+                    openProduct(product);
+                  }}
+                  role="option"
+                  aria-selected="false"
+                >
+                  <Image src={product.imageUrl} unoptimized alt="" width={42} height={42} />
+                  <span><b>{product.name}</b><small>{product.categoryName} · {money.format(product.price)}</small></span>
+                </button>
+              ))}
+            </div>
+          )}
         </form>
         <nav className="header-actions" aria-label="Primary navigation">
+          <button
+            onClick={() => setDarkMode((current) => !current)}
+            aria-label={darkMode ? "Use light theme" : "Use dark theme"}
+          >
+            <span aria-hidden="true">{darkMode ? "☀" : "◐"}</span>
+            <span>Theme</span>
+          </button>
           <button onClick={() => navigate("catalog")}>
             <span aria-hidden="true">▦</span>
             <span>Shop</span>
@@ -428,7 +527,7 @@ export default function Home() {
                   </button>
                   <button
                     className="secondary"
-                    onClick={() => openProduct(products[0])}
+                    onClick={() => openProduct(currentHero)}
                   >
                     See today&apos;s pick <span aria-hidden="true">→</span>
                   </button>
@@ -454,17 +553,22 @@ export default function Home() {
                 <div className="hero-card hero-card-main">
                   <span>Editor&apos;s choice</span>
                   <Image
-                    src={products[0].imageUrl}
+                    src={currentHero.imageUrl}
                     unoptimized
-                    alt={products[0].name}
+                    alt={currentHero.name}
                     width={700}
                     height={700}
                     priority
                   />
                   <div>
-                    <b>{products[0].name}</b>
-                    <small>{money.format(products[0].price)}</small>
+                    <b>{currentHero.name}</b>
+                    <small>{money.format(currentHero.price)}</small>
                   </div>
+                  <nav className="hero-dots" aria-label="Featured products">
+                    {[0, 1, 2, 3].map((index) => (
+                      <button key={index} className={heroIndex === index ? "active" : ""} onClick={() => setHeroIndex(index)} aria-label={`Show featured product ${index + 1}`} />
+                    ))}
+                  </nav>
                 </div>
                 <div className="hero-card hero-card-small">
                   <span>Free delivery</span>
@@ -522,6 +626,20 @@ export default function Home() {
               loading={loading}
               onAll={() => navigate("catalog")}
             />
+
+            {recentProducts.length > 0 && (
+              <ProductSection
+                title="Recently viewed"
+                subtitle="Pick up where you left off"
+                products={recentProducts}
+                onOpen={openProduct}
+                onAdd={addToCart}
+                wishlist={wishlist}
+                onWishlist={toggleWishlist}
+                loading={false}
+                onAll={() => navigate("catalog")}
+              />
+            )}
 
             <section className="collection-grid wrap">
               <article className="collection-card collection-blue">
@@ -848,6 +966,15 @@ export default function Home() {
         onInfo={navigateInfo}
         onMessage={showNotice}
       />
+      {showBackToTop && (
+        <button
+          className="back-to-top"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="Back to top"
+        >
+          ↑
+        </button>
+      )}
     </div>
   );
 }
