@@ -5,6 +5,7 @@ import tools.jackson.databind.ObjectMapper;
 import ecommerce_backend.auth.UserPrincipal;
 import ecommerce_backend.common.NotFoundException;
 import ecommerce_backend.order.CustomerOrder;
+import ecommerce_backend.order.CustomerOrderRepository;
 import ecommerce_backend.order.OrderHistoryEntry;
 import ecommerce_backend.order.OrderHistoryRepository;
 import ecommerce_backend.order.OrderService;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RazorpayPaymentService {
 	private final RazorpayApiClient apiClient;
 	private final RazorpayPaymentAttemptRepository attemptRepository;
+	private final CustomerOrderRepository orderRepository;
 	private final OrderHistoryRepository historyRepository;
 	private final OrderService orderService;
 	private final ObjectMapper objectMapper;
@@ -28,11 +30,12 @@ public class RazorpayPaymentService {
 
 	public RazorpayPaymentService(RazorpayApiClient apiClient,
 			RazorpayPaymentAttemptRepository attemptRepository,
-			OrderHistoryRepository historyRepository,
+			CustomerOrderRepository orderRepository, OrderHistoryRepository historyRepository,
 			OrderService orderService, ObjectMapper objectMapper,
 			@Value("${app.razorpay.webhook-secret:}") String webhookSecret) {
 		this.apiClient = apiClient;
 		this.attemptRepository = attemptRepository;
+		this.orderRepository = orderRepository;
 		this.historyRepository = historyRepository;
 		this.orderService = orderService;
 		this.objectMapper = objectMapper;
@@ -101,6 +104,11 @@ public class RazorpayPaymentService {
 		try {
 			JsonNode root = objectMapper.readTree(payload);
 			String event = requiredText(root, "event");
+			JsonNode refund = root.path("payload").path("refund").path("entity");
+			if (event.startsWith("refund.")) {
+				handleRefundWebhook(event, refund);
+				return;
+			}
 			JsonNode payment = root.path("payload").path("payment").path("entity");
 			String providerOrderId = payment.path("order_id").asText();
 			if (providerOrderId.isBlank()) return;
@@ -119,6 +127,57 @@ public class RazorpayPaymentService {
 		catch (tools.jackson.core.JacksonException exception) {
 			throw new IllegalStateException("Malformed Razorpay webhook payload.", exception);
 		}
+	}
+
+	@Transactional
+	public RazorpayRefundResponse refund(String orderNumber, String actor) {
+		CustomerOrder order = orderRepository.findByOrderNumber(orderNumber)
+				.orElseThrow(() -> new NotFoundException("Order not found."));
+		if (!PaymentStatus.PAID.name().equals(order.getPaymentStatus()))
+			throw new IllegalStateException("Only paid orders can be refunded.");
+		if (order.getStatus() != OrderStatus.CANCELLED && order.getStatus() != OrderStatus.RETURNED)
+			throw new IllegalStateException("Cancel or complete the return before issuing a refund.");
+		RazorpayPaymentAttempt attempt = attemptRepository.findTopByOrderOrderByCreatedAtDesc(order)
+				.orElseThrow(() -> new NotFoundException("Captured Razorpay payment not found."));
+		if (attempt.getStatus() == RazorpayPaymentStatus.REFUNDED)
+			return new RazorpayRefundResponse(orderNumber, attempt.getProviderRefundId(), "REFUNDED");
+		long amountPaise = attempt.getAmountPaise();
+		JsonNode provider = apiClient.refundPayment(attempt.getProviderPaymentId(), amountPaise, orderNumber);
+		String refundId = requiredText(provider, "id");
+		String status = provider.path("status").asText("pending");
+		if (provider.path("amount").asLong(-1) != amountPaise)
+			throw new PaymentGatewayException("Razorpay returned an inconsistent refund amount.");
+		if ("processed".equals(status)) markRefunded(attempt, refundId, amountPaise, actor);
+		else attempt.refundPending(refundId, amountPaise);
+		historyRepository.save(new OrderHistoryEntry(order, "REFUND", "PAID", status.toUpperCase(Locale.ROOT),
+				actor, "Razorpay refund " + refundId));
+		return new RazorpayRefundResponse(orderNumber, refundId, status.toUpperCase(Locale.ROOT));
+	}
+
+	private void handleRefundWebhook(String event, JsonNode refund) {
+		String refundId = refund.path("id").asText();
+		String paymentId = refund.path("payment_id").asText();
+		RazorpayPaymentAttempt attempt = !refundId.isBlank()
+				? attemptRepository.findByProviderRefundId(refundId).orElse(null) : null;
+		if (attempt == null && !paymentId.isBlank())
+			attempt = attemptRepository.findByProviderPaymentId(paymentId).orElse(null);
+		if (attempt == null) return;
+		long amount = refund.path("amount").asLong(-1);
+		if (amount != attempt.getAmountPaise())
+			throw new IllegalStateException("Partial or mismatched refund requires manual review.");
+		if ("refund.processed".equals(event)) markRefunded(attempt, refundId, amount, "razorpay-webhook");
+		else if ("refund.failed".equals(event)) attempt.refundFailed(refundId,
+				refund.path("error_code").asText(null), refund.path("error_description").asText(null));
+	}
+
+	private void markRefunded(RazorpayPaymentAttempt attempt, String refundId, long amount, String actor) {
+		CustomerOrder order = attempt.getOrder();
+		if (attempt.getStatus() == RazorpayPaymentStatus.REFUNDED) return;
+		attempt.refunded(refundId, amount);
+		String previous = order.getPaymentStatus();
+		if (!PaymentStatus.REFUNDED.name().equals(previous)) order.transitionPaymentTo(PaymentStatus.REFUNDED);
+		historyRepository.save(new OrderHistoryEntry(order, "PAYMENT_STATUS", previous, "REFUNDED",
+				actor, "Full Razorpay refund " + refundId));
 	}
 
 	private void validateCapturedPayment(RazorpayPaymentAttempt attempt, JsonNode payment) {

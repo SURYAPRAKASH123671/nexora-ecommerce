@@ -46,6 +46,16 @@ public class RazorpayApiClient {
 		return send("payments/" + paymentId, "GET", null);
 	}
 
+	public JsonNode refundPayment(String paymentId, long amountPaise, String orderNumber) {
+		if (paymentId == null || !paymentId.matches("pay_[A-Za-z0-9]+"))
+			throw new PaymentGatewayException("Invalid Razorpay payment identifier.");
+		return send("payments/" + paymentId + "/refund", "POST", Map.of(
+				"amount", amountPaise,
+				"speed", "normal",
+				"notes", Map.of("nexora_order_number", orderNumber)
+		));
+	}
+
 	public String keyId() { ensureConfigured(); return keyId; }
 	public String keySecret() { ensureConfigured(); return keySecret; }
 

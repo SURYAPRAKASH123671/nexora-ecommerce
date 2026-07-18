@@ -11,6 +11,13 @@ public record TimelineStep(String status, String label, boolean completed, boole
 					new TimelineStep("CANCELLED", "Order cancelled", true, true)
 			);
 		}
+		if (orderStatus == OrderStatus.RETURNED) {
+			return List.of(
+					new TimelineStep("PLACED", "Order placed", true, false),
+					new TimelineStep("DELIVERED", "Delivered", true, false),
+					new TimelineStep("RETURNED", "Returned", true, true)
+			);
+		}
 		if (orderStatus == OrderStatus.PAYMENT_VERIFICATION_PENDING
 				|| orderStatus == OrderStatus.PAYMENT_REJECTED) {
 			return List.of(
@@ -44,6 +51,7 @@ public record TimelineStep(String status, String label, boolean completed, boole
 			case SHIPPED -> "Shipped";
 			case OUT_FOR_DELIVERY -> "Out for delivery";
 			case DELIVERED -> "Delivered";
+			case RETURNED -> "Returned";
 			case CANCELLED -> "Cancelled";
 		};
 	}

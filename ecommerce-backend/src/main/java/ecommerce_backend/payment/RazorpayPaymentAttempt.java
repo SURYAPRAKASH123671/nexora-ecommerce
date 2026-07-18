@@ -39,6 +39,10 @@ public class RazorpayPaymentAttempt {
 	private String failureCode;
 	@Column(length = 500)
 	private String failureDescription;
+	@Column(unique = true, length = 80)
+	private String providerRefundId;
+	@Column
+	private Long refundedAmountPaise;
 	@Column(nullable = false, updatable = false)
 	private Instant createdAt;
 	@Column(nullable = false)
@@ -79,6 +83,31 @@ public class RazorpayPaymentAttempt {
 		if (status == RazorpayPaymentStatus.CREATED) status = RazorpayPaymentStatus.CANCELLED;
 	}
 
+	public void refundPending(String refundId, long amountPaise) {
+		if (status != RazorpayPaymentStatus.CAPTURED && status != RazorpayPaymentStatus.REFUND_FAILED)
+			throw new IllegalStateException("Only captured payments can be refunded.");
+		providerRefundId = refundId;
+		refundedAmountPaise = amountPaise;
+		status = RazorpayPaymentStatus.REFUND_PENDING;
+		failureCode = null;
+		failureDescription = null;
+	}
+
+	public void refunded(String refundId, long amountPaise) {
+		providerRefundId = refundId;
+		refundedAmountPaise = amountPaise;
+		status = RazorpayPaymentStatus.REFUNDED;
+		failureCode = null;
+		failureDescription = null;
+	}
+
+	public void refundFailed(String refundId, String code, String description) {
+		providerRefundId = refundId;
+		status = RazorpayPaymentStatus.REFUND_FAILED;
+		failureCode = trim(code, 120);
+		failureDescription = trim(description, 500);
+	}
+
 	private String trim(String value, int max) {
 		return value == null || value.isBlank() ? null : value.trim().substring(0, Math.min(max, value.trim().length()));
 	}
@@ -93,4 +122,6 @@ public class RazorpayPaymentAttempt {
 	public String getFailureCode() { return failureCode; }
 	public String getFailureDescription() { return failureDescription; }
 	public Instant getCreatedAt() { return createdAt; }
+	public String getProviderRefundId() { return providerRefundId; }
+	public Long getRefundedAmountPaise() { return refundedAmountPaise; }
 }

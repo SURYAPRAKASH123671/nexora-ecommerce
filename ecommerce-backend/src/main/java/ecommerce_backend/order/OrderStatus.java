@@ -9,6 +9,7 @@ public enum OrderStatus {
 	SHIPPED,
 	OUT_FOR_DELIVERY,
 	DELIVERED,
+	RETURNED,
 	CANCELLED;
 
 	public boolean isCustomerCancellable() {
@@ -26,7 +27,8 @@ public enum OrderStatus {
 			case PACKED -> next == SHIPPED;
 			case SHIPPED -> next == OUT_FOR_DELIVERY;
 			case OUT_FOR_DELIVERY -> next == DELIVERED;
-			case DELIVERED, CANCELLED -> false;
+			case DELIVERED -> next == RETURNED;
+			case RETURNED, CANCELLED -> false;
 		};
 	}
 }

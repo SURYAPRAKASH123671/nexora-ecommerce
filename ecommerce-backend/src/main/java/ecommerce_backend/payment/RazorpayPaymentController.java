@@ -45,5 +45,11 @@ public class RazorpayPaymentController {
 		return ResponseEntity.ok().build();
 	}
 
+	@PostMapping("/admin/orders/{orderNumber}/payments/razorpay/refund")
+	public RazorpayRefundResponse refund(@AuthenticationPrincipal UserPrincipal principal,
+			@PathVariable String orderNumber) {
+		return service.refund(orderNumber, principal.getUsername());
+	}
+
 	public record CancelRequest(@NotBlank String razorpayOrderId) {}
 }
