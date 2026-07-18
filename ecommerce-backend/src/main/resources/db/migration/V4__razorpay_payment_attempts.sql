@@ -1,0 +1,20 @@
+CREATE TABLE razorpay_payment_attempts (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    order_id BIGINT NOT NULL,
+    provider_order_id VARCHAR(80) NOT NULL,
+    provider_payment_id VARCHAR(80),
+    amount_paise BIGINT NOT NULL,
+    currency VARCHAR(3) NOT NULL,
+    status VARCHAR(24) NOT NULL,
+    failure_code VARCHAR(120),
+    failure_description VARCHAR(500),
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    version BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_razorpay_provider_order UNIQUE (provider_order_id),
+    CONSTRAINT uk_razorpay_provider_payment UNIQUE (provider_payment_id),
+    CONSTRAINT fk_razorpay_attempt_order FOREIGN KEY (order_id) REFERENCES customer_orders (id),
+    INDEX idx_razorpay_order_created (order_id, created_at),
+    INDEX idx_razorpay_status_updated (status, updated_at)
+);

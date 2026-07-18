@@ -2,6 +2,7 @@ package ecommerce_backend.category;
 
 import ecommerce_backend.common.ConflictException;
 import ecommerce_backend.common.NotFoundException;
+import ecommerce_backend.product.ProductRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,9 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class CategoryService {
 
 	private final CategoryRepository categoryRepository;
+	private final ProductRepository productRepository;
 
-	public CategoryService(CategoryRepository categoryRepository) {
+	public CategoryService(CategoryRepository categoryRepository, ProductRepository productRepository) {
 		this.categoryRepository = categoryRepository;
+		this.productRepository = productRepository;
 	}
 
 	@Transactional(readOnly = true)
@@ -36,6 +39,28 @@ public class CategoryService {
 
 		Category category = new Category(request.name().trim(), normalize(request.description()));
 		return CategoryResponse.from(categoryRepository.save(category));
+	}
+
+	@Transactional
+	public CategoryResponse updateCategory(Long id, CategoryRequest request) {
+		Category category = findCategory(id);
+		categoryRepository.findByNameIgnoreCase(request.name())
+				.filter(existing -> !existing.getId().equals(id))
+				.ifPresent(existing -> {
+					throw new ConflictException("Category already exists: " + existing.getName());
+				});
+		category.setName(request.name().trim());
+		category.setDescription(normalize(request.description()));
+		return CategoryResponse.from(category);
+	}
+
+	@Transactional
+	public void deleteCategory(Long id) {
+		Category category = findCategory(id);
+		if (productRepository.countByCategoryId(id) > 0) {
+			throw new ConflictException("Category cannot be deleted while products reference it.");
+		}
+		categoryRepository.delete(category);
 	}
 
 	@Transactional(readOnly = true)

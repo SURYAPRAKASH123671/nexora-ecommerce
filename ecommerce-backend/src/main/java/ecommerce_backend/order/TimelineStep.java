@@ -11,6 +11,14 @@ public record TimelineStep(String status, String label, boolean completed, boole
 					new TimelineStep("CANCELLED", "Order cancelled", true, true)
 			);
 		}
+		if (orderStatus == OrderStatus.PAYMENT_VERIFICATION_PENDING
+				|| orderStatus == OrderStatus.PAYMENT_REJECTED) {
+			return List.of(
+					new TimelineStep("PLACED", "Order reference created", true, false),
+					new TimelineStep(orderStatus.name(), label(orderStatus), true, true),
+					new TimelineStep("CONFIRMED", "Confirmed after verification", false, false)
+			);
+		}
 		List<OrderStatus> statuses = List.of(
 				OrderStatus.PLACED,
 				OrderStatus.CONFIRMED,
@@ -29,6 +37,8 @@ public record TimelineStep(String status, String label, boolean completed, boole
 	private static String label(OrderStatus status) {
 		return switch (status) {
 			case PLACED -> "Order placed";
+			case PAYMENT_VERIFICATION_PENDING -> "Payment pending verification";
+			case PAYMENT_REJECTED -> "Payment proof rejected";
 			case CONFIRMED -> "Confirmed";
 			case PACKED -> "Packed";
 			case SHIPPED -> "Shipped";

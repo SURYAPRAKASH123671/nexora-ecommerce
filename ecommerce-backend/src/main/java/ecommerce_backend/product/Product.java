@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 
@@ -41,6 +42,9 @@ public class Product {
 
 	@Column(nullable = false)
 	private Instant createdAt = Instant.now();
+
+	@Version
+	private Long version;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "category_id", nullable = false)
@@ -93,5 +97,39 @@ public class Product {
 
 	public Category getCategory() {
 		return category;
+	}
+
+	public void update(String name, String description, BigDecimal price, Integer stockQuantity,
+			String imageUrl, Category category) {
+		this.name = name;
+		this.description = description;
+		this.price = price;
+		this.stockQuantity = stockQuantity;
+		this.imageUrl = imageUrl;
+		this.category = category;
+	}
+
+	public void reserveStock(int quantity) {
+		if (!active) {
+			throw new IllegalStateException("Product is not available: " + name);
+		}
+		if (quantity <= 0 || stockQuantity < quantity) {
+			throw new IllegalStateException("Insufficient stock for product: " + name);
+		}
+		stockQuantity -= quantity;
+	}
+
+	public void restoreStock(int quantity) {
+		if (quantity > 0) {
+			stockQuantity += quantity;
+		}
+	}
+
+	public void deactivate() {
+		this.active = false;
+	}
+
+	public void activate() {
+		this.active = true;
 	}
 }

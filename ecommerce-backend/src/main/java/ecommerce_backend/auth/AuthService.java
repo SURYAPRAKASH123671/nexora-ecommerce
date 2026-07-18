@@ -6,6 +6,10 @@ import ecommerce_backend.email.EmailResponse;
 import ecommerce_backend.email.EmailService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.Locale;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +29,7 @@ public class AuthService {
 	private final PasswordResetEmailBuilder passwordResetEmailBuilder;
 	private final String frontendBaseUrl;
 	private final String backendBaseUrl;
+	private final boolean autoVerifyWhenMailDisabled;
 
 	public AuthService(AppUserRepository userRepository,
 			PasswordEncoder passwordEncoder,
@@ -33,7 +38,8 @@ public class AuthService {
 			EmailVerificationEmailBuilder verificationEmailBuilder,
 			PasswordResetEmailBuilder passwordResetEmailBuilder,
 			@Value("${app.frontend.base-url:${FRONTEND_BASE_URL:http://localhost:3000}}") String frontendBaseUrl,
-			@Value("${app.backend.base-url:${BACKEND_BASE_URL:http://localhost:8080}}") String backendBaseUrl) {
+			@Value("${app.backend.base-url:${BACKEND_BASE_URL:http://localhost:8080}}") String backendBaseUrl,
+			@Value("${app.auth.auto-verify-when-mail-disabled:false}") boolean autoVerifyWhenMailDisabled) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
@@ -42,6 +48,7 @@ public class AuthService {
 		this.passwordResetEmailBuilder = passwordResetEmailBuilder;
 		this.frontendBaseUrl = frontendBaseUrl;
 		this.backendBaseUrl = backendBaseUrl;
+		this.autoVerifyWhenMailDisabled = autoVerifyWhenMailDisabled;
 	}
 
 	@Transactional
@@ -52,10 +59,10 @@ public class AuthService {
 		}
 
 		AppUser user = new AppUser(request.name().trim(), email, passwordEncoder.encode(request.password()));
-		issueVerificationToken(user);
+		String verificationToken = issueVerificationToken(user);
 		AppUser savedUser = userRepository.save(user);
-		EmailResponse emailResponse = sendVerificationEmail(savedUser);
-		if ("SKIPPED".equals(emailResponse.status())) {
+		EmailResponse emailResponse = sendVerificationEmail(savedUser, verificationToken);
+		if ("SKIPPED".equals(emailResponse.status()) && autoVerifyWhenMailDisabled) {
 			savedUser.markEmailVerified();
 			JwtService.TokenIssue token = jwtService.issue(savedUser, false);
 			return AuthResponse.authenticated(token.token(), token.expiresInSeconds(), savedUser);
@@ -83,7 +90,7 @@ public class AuthService {
 
 	@Transactional
 	public VerificationResponse verifyEmail(String token) {
-		AppUser user = userRepository.findByEmailVerificationToken(token)
+		AppUser user = userRepository.findByEmailVerificationToken(hashToken(token))
 				.orElseThrow(() -> new AuthException("Verification link is invalid."));
 		if (user.getEmailVerificationExpiresAt() == null
 				|| user.getEmailVerificationExpiresAt().isBefore(Instant.now())) {
@@ -100,22 +107,25 @@ public class AuthService {
 		if (user.isEmailVerified()) {
 			return new VerificationResponse("ALREADY_VERIFIED", "This email is already verified.");
 		}
-		issueVerificationToken(user);
-		EmailResponse emailResponse = sendVerificationEmail(user);
-		if ("SKIPPED".equals(emailResponse.status())) {
+		String verificationToken = issueVerificationToken(user);
+		EmailResponse emailResponse = sendVerificationEmail(user, verificationToken);
+		if ("SKIPPED".equals(emailResponse.status()) && autoVerifyWhenMailDisabled) {
 			user.markEmailVerified();
 			return new VerificationResponse("VERIFIED", "Email verified for local development.");
 		}
-		return new VerificationResponse("SENT", "Verification email sent.");
+		return "SKIPPED".equals(emailResponse.status())
+				? new VerificationResponse("SKIPPED", "Email delivery is disabled. Contact an administrator.")
+				: new VerificationResponse("SENT", "Verification email sent.");
 	}
 
 	@Transactional
 	public VerificationResponse forgotPassword(ForgotPasswordRequest request) {
 		userRepository.findByEmailIgnoreCase(normalizeEmail(request.email()))
 				.ifPresent(user -> {
-					user.markPasswordResetRequested(UUID.randomUUID().toString().replace("-", ""),
+					String resetToken = randomToken();
+					user.markPasswordResetRequested(hashToken(resetToken),
 							Instant.now().plus(30, ChronoUnit.MINUTES));
-					sendPasswordResetEmail(user);
+					sendPasswordResetEmail(user, resetToken);
 				});
 		return new VerificationResponse("SENT",
 				"If an account exists for this email, a password reset link has been sent.");
@@ -123,7 +133,7 @@ public class AuthService {
 
 	@Transactional
 	public VerificationResponse resetPassword(ResetPasswordRequest request) {
-		AppUser user = userRepository.findByPasswordResetToken(request.token())
+		AppUser user = userRepository.findByPasswordResetToken(hashToken(request.token()))
 				.orElseThrow(() -> new AuthException("Password reset link is invalid."));
 		if (user.getPasswordResetExpiresAt() == null || user.getPasswordResetExpiresAt().isBefore(Instant.now())) {
 			throw new AuthException("Password reset link has expired. Please request a new link.");
@@ -136,25 +146,42 @@ public class AuthService {
 		return AuthUserResponse.from(principal.getUser());
 	}
 
-	private void issueVerificationToken(AppUser user) {
-		user.markEmailVerificationRequested(UUID.randomUUID().toString().replace("-", ""),
+	private String issueVerificationToken(AppUser user) {
+		String rawToken = randomToken();
+		user.markEmailVerificationRequested(hashToken(rawToken),
 				Instant.now().plus(24, ChronoUnit.HOURS));
+		return rawToken;
 	}
 
-	private EmailResponse sendVerificationEmail(AppUser user) {
-		String verifyUrl = backendBaseUrl + "/api/auth/verify-email?token=" + user.getEmailVerificationToken();
+	private EmailResponse sendVerificationEmail(AppUser user, String rawToken) {
+		String verifyUrl = backendBaseUrl + "/api/auth/verify-email?token=" + rawToken;
 		String html = verificationEmailBuilder.build(user.getName(), verifyUrl);
 		return emailService.send(new EmailRequest(user.getEmail(), "Verify your Nexora account", html, true));
 	}
 
-	private void sendPasswordResetEmail(AppUser user) {
-		String resetUrl = frontendBaseUrl + "/reset-password?token=" + user.getPasswordResetToken();
+	private void sendPasswordResetEmail(AppUser user, String rawToken) {
+		String resetUrl = frontendBaseUrl + "/reset-password?token=" + rawToken;
 		String html = passwordResetEmailBuilder.build(user.getName(), resetUrl);
 		emailService.send(new EmailRequest(user.getEmail(), "Reset your Nexora password", html, true));
 	}
 
 	private String normalizeEmail(String email) {
 		return email.trim().toLowerCase(Locale.ROOT);
+	}
+
+	private String randomToken() {
+		return UUID.randomUUID().toString().replace("-", "")
+				+ UUID.randomUUID().toString().replace("-", "");
+	}
+
+	private String hashToken(String token) {
+		try {
+			return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+					.digest(token.getBytes(StandardCharsets.UTF_8)));
+		}
+		catch (NoSuchAlgorithmException exception) {
+			throw new IllegalStateException("SHA-256 is unavailable", exception);
+		}
 	}
 
 	public String verifiedRedirectUrl() {

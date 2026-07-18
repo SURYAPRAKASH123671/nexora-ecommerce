@@ -11,4 +11,6 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
 	List<CustomerOrder> findAllByOrderByPlacedAtDesc();
 
 	Optional<CustomerOrder> findByOrderNumberAndUser(String orderNumber, AppUser user);
+
+	Optional<CustomerOrder> findByOrderNumber(String orderNumber);
 }

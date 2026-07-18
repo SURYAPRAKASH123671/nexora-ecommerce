@@ -127,6 +127,51 @@ public class CustomerOrder {
 		this.cancelledAt = Instant.now();
 	}
 
+	public void transitionTo(OrderStatus nextStatus) {
+		if (nextStatus == status) {
+			return;
+		}
+		if (!status.canTransitionTo(nextStatus)) {
+			throw new IllegalStateException("Invalid order status transition: " + status + " -> " + nextStatus);
+		}
+		if (nextStatus == OrderStatus.CANCELLED) {
+			cancel();
+		}
+		else {
+			this.status = nextStatus;
+		}
+	}
+
+	public void transitionPaymentTo(PaymentStatus nextStatus) {
+		PaymentStatus currentStatus = PaymentStatus.valueOf(paymentStatus);
+		if (nextStatus == currentStatus) {
+			return;
+		}
+		if (!currentStatus.canTransitionTo(nextStatus)) {
+			throw new IllegalStateException(
+					"Invalid payment status transition: " + currentStatus + " -> " + nextStatus);
+		}
+		this.paymentStatus = nextStatus.name();
+	}
+
+	public void submitManualPaymentForVerification() {
+		if (!"UPI".equals(paymentMethod)) {
+			throw new IllegalStateException("Manual UPI proof can only be submitted for UPI orders.");
+		}
+		transitionPaymentTo(PaymentStatus.PENDING_VERIFICATION);
+		transitionTo(OrderStatus.PAYMENT_VERIFICATION_PENDING);
+	}
+
+	public void verifyManualPayment() {
+		transitionPaymentTo(PaymentStatus.VERIFIED);
+		transitionTo(OrderStatus.CONFIRMED);
+	}
+
+	public void rejectManualPayment() {
+		transitionPaymentTo(PaymentStatus.REJECTED);
+		transitionTo(OrderStatus.PAYMENT_REJECTED);
+	}
+
 	public Long getId() { return id; }
 	public String getOrderNumber() { return orderNumber; }
 	public AppUser getUser() { return user; }

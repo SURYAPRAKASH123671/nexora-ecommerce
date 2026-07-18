@@ -1,6 +1,12 @@
-target
 .git
-.gitignore
+.github
+.idea
+.vscode
+target
+logs
+output
+tmp
+collabboard
+orderflow
+linkedin-media
 *.log
-.env
-.env.*

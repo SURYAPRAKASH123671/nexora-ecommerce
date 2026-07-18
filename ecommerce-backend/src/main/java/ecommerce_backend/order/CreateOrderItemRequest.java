@@ -8,12 +8,12 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 public record CreateOrderItemRequest(
-		Long productId,
-		@NotBlank @Size(max = 180) String productName,
+		@NotNull Long productId,
+		@Size(max = 180) String productName,
 		@Size(max = 120) String brand,
 		@Size(max = 120) String variant,
 		@Size(max = 500) String imageUrl,
 		@NotNull @Min(1) Integer quantity,
-		@NotNull @DecimalMin("0.01") BigDecimal unitPrice
+		@DecimalMin("0.01") BigDecimal unitPrice
 ) {
 }

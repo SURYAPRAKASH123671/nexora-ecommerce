@@ -1,0 +1,47 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: nexora_store
+      MYSQL_USER: nexora_app
+      MYSQL_PASSWORD: NexoraDev123
+      MYSQL_ROOT_PASSWORD: NexoraRoot123
+    volumes:
+      - nexora_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysql -h localhost -unexora_app -pNexoraDev123 -D nexora_store -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: .
+    restart: on-failure:5
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mysql://mysql:3306/nexora_store?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: nexora_app
+      DB_PASSWORD: NexoraDev123
+      JWT_SECRET: local-docker-secret-change-before-production-64-characters-minimum
+      FRONTEND_BASE_URL: http://localhost:3000
+      BACKEND_BASE_URL: http://localhost:8080
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      MAIL_ENABLED: "false"
+      MAIL_FROM: no-reply@nexora.local
+      UPI_MERCHANT_ID: suryakannan32123@oksbi
+      UPI_MERCHANT_NAME: Surya Prakash K S
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      PAYMENT_PROOF_STORAGE_DIR: /app/data/payment-proofs
+    volumes:
+      - nexora_payment_proofs:/app/data/payment-proofs
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  nexora_mysql:
+  nexora_payment_proofs:

@@ -23,6 +23,9 @@ public class JwtService {
 			@Value("${app.jwt.remember-me-token-seconds:${JWT_REMEMBER_ME_TOKEN_SECONDS:2592000}}")
 			long rememberMeTokenSeconds) {
 		this.secret = secret;
+		if (secret == null || secret.length() < 32) {
+			throw new IllegalStateException("JWT secret must contain at least 32 characters.");
+		}
 		this.accessTokenSeconds = accessTokenSeconds;
 		this.rememberMeTokenSeconds = rememberMeTokenSeconds;
 	}
