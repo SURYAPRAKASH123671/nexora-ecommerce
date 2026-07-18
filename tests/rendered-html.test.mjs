@@ -428,7 +428,7 @@ test("premium header supports accessible search, navigation and responsive inter
   assert.match(styles, /category-strip.*position: sticky/s);
 });
 
-test("Nexora design system and shopping guide remain original, explainable and factual", async () => {
+test("Nexora design system and product finder remain original, explainable and factual", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/material-system.css", import.meta.url), "utf8");
   const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
@@ -452,8 +452,8 @@ test("support system persists protected conversations, files, tickets and agent 
   for (const table of ["support_conversations", "support_messages", "support_attachments", "support_tickets", "support_internal_notes"]) assert.match(schema, new RegExp(table));
   assert.match(conversations, /requireSiteUser/);
   assert.match(messages, /20/);
-  assert.match(messages, /createAutomatedReply/);
-  assert.match(messages, /assistant@nexora\.support/);
+  assert.match(messages, /createSupportReply/);
+  assert.match(messages, /care@nexora\.support/);
   assert.match(messages, /OTP, UPI PIN, CVV/);
   assert.match(files, /%PDF-/);
   assert.match(files, /PENDING_EXTERNAL_SCAN/);

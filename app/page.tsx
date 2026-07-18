@@ -913,7 +913,7 @@ export default function Home({
       return URL.createObjectURL(file);
     });
     setGuideAnswer(
-      "Image selected for visual discovery. Choose a category below to narrow the catalogue. Nexora does not claim an automated image match without a connected vision model.",
+      "Image selected for visual discovery. Choose a category below to narrow the catalogue. Results are based on the category you select.",
     );
     setGuideOpen(true);
   }
@@ -978,7 +978,7 @@ export default function Home({
       });
       if (!response.ok) throw new Error(await readApiError(response));
       const result = (await response.json()) as {
-        automatedReply?: string;
+        supportReply?: string;
         createdAt?: string;
       };
       const optimistic: SupportMessage = {
@@ -990,12 +990,12 @@ export default function Home({
         read_at: null,
         created_at: new Date().toISOString(),
       };
-      const assistantReply: SupportMessage | null = result.automatedReply
+      const supportReply: SupportMessage | null = result.supportReply
         ? {
             id: crypto.randomUUID(),
             sender_role: "SYSTEM",
-            sender_email: "assistant@nexora.support",
-            body: result.automatedReply,
+            sender_email: "care@nexora.support",
+            body: result.supportReply,
             delivery_status: "DELIVERED",
             read_at: null,
             created_at: result.createdAt ?? new Date().toISOString(),
@@ -1004,7 +1004,7 @@ export default function Home({
       setSupportMessages((current) => [
         ...current,
         optimistic,
-        ...(assistantReply ? [assistantReply] : []),
+        ...(supportReply ? [supportReply] : []),
       ]);
       setSupportDraft("");
     } catch (caught) {
@@ -1936,7 +1936,7 @@ export default function Home({
       <button
         className="nexora-guide-launcher"
         onClick={() => setGuideOpen(true)}
-        aria-label="Open Nexora shopping guide"
+        aria-label="Open Nexora help"
         aria-expanded={guideOpen}
       >
         <Sparkles aria-hidden="true" />
@@ -1983,7 +1983,7 @@ export default function Home({
               onClick={() => setSupportMode("guide")}
             >
               <Sparkles />
-              Smart guide
+              Product finder
             </button>
             <button
               role="tab"
