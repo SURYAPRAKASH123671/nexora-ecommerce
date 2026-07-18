@@ -18,6 +18,8 @@
 
 html { scroll-padding-top: 104px; }
 body { min-width: 320px; overflow-x: hidden; }
+.pull-refresh-indicator { position: fixed; top: 0; left: 50%; z-index: 150; min-height: 34px; display: none; align-items: center; justify-content: center; border-radius: 999px; padding: 0 14px; background: #17213a; color: #fff; box-shadow: 0 10px 30px rgba(23,33,58,.2); font-size: 10px; font-weight: 700; pointer-events: none; will-change: transform; transition: background 180ms ease; }
+.pull-refresh-indicator.ready { background: var(--blue); }
 button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 button, [role="button"], a { touch-action: manipulation; }
 button { min-height: 40px; }
@@ -108,6 +110,7 @@ textarea { resize: vertical; }
   .content-card:hover, .account-grid article:hover, .metric-grid article:hover { transform: translateY(-2px); box-shadow: var(--shadow-card); }
 }
 @media (max-width: 760px) {
+  .pull-refresh-indicator { display: flex; }
   html { scroll-padding-top: 148px; }
   .wrap { width: min(100% - 24px, 1240px); }
   .topbar { padding-inline: 12px; }
@@ -144,3 +147,8 @@ textarea { resize: vertical; }
 @keyframes polish-heart { 45% { transform: scale(1.25) rotate(-8deg); } }
 @keyframes polish-badge { 45% { transform: scale(1.24); } }
 @keyframes polish-float { 50% { transform: translateY(-5px); } }
+
+@media (min-width: 761px) and (prefers-reduced-motion: no-preference) {
+  .hero-copy { transform: translate3d(0,var(--hero-copy-y,0),0); }
+  .hero-visual { transform: translate3d(0,var(--hero-visual-y,0),0) scale(var(--hero-visual-scale,1)); }
+}

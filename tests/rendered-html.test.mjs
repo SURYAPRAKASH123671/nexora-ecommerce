@@ -430,6 +430,16 @@ test("premium header supports accessible search, navigation and responsive inter
   assert.match(page, /brand-mark-animated/);
   assert.match(styles, /nexora-logo-arrive/);
   assert.match(styles, /header-actions\[data-active/);
+  assert.match(page, /pull-refresh-indicator/);
+  assert.match(page, /navigator\.vibrate/);
+});
+
+test("premium product gallery supports fluid keyboard and swipe navigation", async () => {
+  const productPage = await readFile(new URL("../app/PremiumProductPage.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/premium-product.css", import.meta.url), "utf8");
+  for (const behavior of ["showPreviousMedia", "showNextMedia", "finishGallerySwipe", "ArrowLeft", "ArrowRight", "gallery-counter"]) assert.match(productPage, new RegExp(behavior));
+  assert.match(styles, /touch-action: pan-y/);
+  assert.match(styles, /will-change: transform, opacity/);
 });
 
 test("Nexora design system and product finder remain original, explainable and factual", async () => {

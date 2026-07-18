@@ -222,6 +222,8 @@ export default function Home({
   const [mobileBrand, setMobileBrand] = useState("All brands");
   const [mobileBudget, setMobileBudget] = useState("All prices");
   const [headerScrolled, setHeaderScrolled] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const pullStartY = useRef<number | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchActiveIndex, setSearchActiveIndex] = useState(-1);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
@@ -389,6 +391,10 @@ export default function Home({
     const onScroll = () => {
       setShowBackToTop(window.scrollY > 700);
       setHeaderScrolled(window.scrollY > 8);
+      const progress = Math.min(window.scrollY, 220);
+      document.documentElement.style.setProperty("--hero-copy-y", `${progress * 0.035}px`);
+      document.documentElement.style.setProperty("--hero-visual-y", `${progress * -0.055}px`);
+      document.documentElement.style.setProperty("--hero-visual-scale", String(1 - progress * 0.00008));
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
@@ -1050,7 +1056,37 @@ export default function Home({
   }
 
   return (
-    <div className={`site-shell${darkMode ? " dark" : ""}`}>
+    <div
+      className={`site-shell${darkMode ? " dark" : ""}`}
+      onPointerDownCapture={(event) => {
+        if (
+          event.pointerType === "touch" &&
+          (event.target as HTMLElement).closest("button") &&
+          navigator.vibrate
+        )
+          navigator.vibrate(6);
+      }}
+      onTouchStart={(event) => {
+        if (window.scrollY === 0) pullStartY.current = event.touches[0]?.clientY ?? null;
+      }}
+      onTouchMove={(event) => {
+        if (pullStartY.current === null || window.scrollY > 0) return;
+        setPullDistance(Math.min(86, Math.max(0, (event.touches[0].clientY - pullStartY.current) * 0.42)));
+      }}
+      onTouchEnd={() => {
+        const shouldRefresh = pullDistance >= 72;
+        pullStartY.current = null;
+        setPullDistance(0);
+        if (shouldRefresh) window.location.reload();
+      }}
+    >
+      <div
+        className={`pull-refresh-indicator${pullDistance >= 72 ? " ready" : ""}`}
+        style={{ transform: `translate3d(-50%, ${pullDistance - 54}px, 0)` }}
+        aria-hidden="true"
+      >
+        {pullDistance >= 72 ? "Release to refresh" : "Pull to refresh"}
+      </div>
       <a className="skip-link" href="#main">
         Skip to content
       </a>

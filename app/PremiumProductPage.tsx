@@ -56,6 +56,8 @@ export default function PremiumProductPage({
   const [zoomed, setZoomed] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
   const [fullscreen, setFullscreen] = useState(false);
+  const swipeStartX = useRef<number | null>(null);
+  const didSwipe = useRef(false);
   const [pin, setPin] = useState("560001");
   const [pinDraft, setPinDraft] = useState("560001");
   const [emiMonths, setEmiMonths] = useState(12);
@@ -105,6 +107,38 @@ export default function PremiumProductPage({
     setMediaIndex(0);
     setZoomed(false);
   }
+
+  function showPreviousMedia() {
+    setMediaIndex((value) => (value - 1 + media.length) % media.length);
+    setZoomed(false);
+  }
+
+  function showNextMedia() {
+    setMediaIndex((value) => (value + 1) % media.length);
+    setZoomed(false);
+  }
+
+  function finishGallerySwipe(clientX: number) {
+    if (swipeStartX.current === null) return;
+    const distance = clientX - swipeStartX.current;
+    swipeStartX.current = null;
+    if (Math.abs(distance) < 44) return;
+    didSwipe.current = true;
+    if (navigator.vibrate) navigator.vibrate(7);
+    if (distance > 0) showPreviousMedia();
+    else showNextMedia();
+  }
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFullscreen(false);
+      if (event.key === "ArrowLeft") showPreviousMedia();
+      if (event.key === "ArrowRight") showNextMedia();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [fullscreen, media.length]);
 
   function checkDelivery() {
     if (!/^\d{6}$/.test(pinDraft.trim())) {
@@ -188,24 +222,52 @@ export default function PremiumProductPage({
               <button onClick={() => setFullscreen(true)}>Fullscreen</button>
             </div>
           </div>
-          <button
-            className={`premium-main-image ${zoomed ? "is-zoomed" : ""}`}
-            onClick={() => setZoomed((value) => !value)}
-            onPointerMove={moveZoom}
-            aria-label={zoomed ? "Reset image zoom" : "Zoom product image"}
+          <div
+            className="premium-image-stage"
+            tabIndex={0}
+            role="group"
+            aria-label={`Product gallery, image ${mediaIndex + 1} of ${media.length}`}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft") showPreviousMedia();
+              if (event.key === "ArrowRight") showNextMedia();
+            }}
+            onPointerDown={(event) => {
+              swipeStartX.current = event.clientX;
+            }}
+            onPointerUp={(event) => finishGallerySwipe(event.clientX)}
           >
-            <Image
-              key={selectedMedia.src}
-              src={selectedMedia.src}
-              unoptimized
-              alt={selectedMedia.alt}
-              width={1200}
-              height={1200}
-              priority
-              sizes="(max-width: 1050px) 100vw, 58vw"
-              style={{ transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%` }}
-            />
-          </button>
+            <button
+              className={`premium-main-image ${zoomed ? "is-zoomed" : ""}`}
+              onClick={() => {
+                if (didSwipe.current) {
+                  didSwipe.current = false;
+                  return;
+                }
+                setZoomed((value) => !value);
+              }}
+              onPointerMove={moveZoom}
+              aria-label={zoomed ? "Reset image zoom" : "Zoom product image"}
+            >
+              <Image
+                key={selectedMedia.src}
+                src={selectedMedia.src}
+                unoptimized
+                alt={selectedMedia.alt}
+                width={1200}
+                height={1200}
+                priority
+                sizes="(max-width: 1050px) 100vw, 58vw"
+                style={{ transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%` }}
+              />
+            </button>
+            {media.length > 1 && (
+              <>
+                <button className="inline-gallery-nav previous" onClick={showPreviousMedia} aria-label="Previous product image">←</button>
+                <button className="inline-gallery-nav next" onClick={showNextMedia} aria-label="Next product image">→</button>
+                <span className="gallery-counter" aria-live="polite">{mediaIndex + 1} / {media.length}</span>
+              </>
+            )}
+          </div>
           <div className="premium-thumbnails" aria-label="Product gallery">
             {media.map((item, index) => (
               <button
@@ -718,11 +780,7 @@ export default function PremiumProductPage({
           </button>
           <button
             className="gallery-nav previous"
-            onClick={() =>
-              setMediaIndex(
-                (value) => (value - 1 + media.length) % media.length,
-              )
-            }
+            onClick={showPreviousMedia}
             aria-label="Previous image"
           >
             ←
@@ -737,7 +795,7 @@ export default function PremiumProductPage({
           />
           <button
             className="gallery-nav next"
-            onClick={() => setMediaIndex((value) => (value + 1) % media.length)}
+            onClick={showNextMedia}
             aria-label="Next image"
           >
             →
