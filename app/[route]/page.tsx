@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ route: st
   const info = information[route];
   const title = info?.title ?? (route === "shop" ? "Shop" : route[0]?.toUpperCase() + route.slice(1));
   const description = info?.description ?? `${title} on Nexora Commerce.`;
-  const url = `https://nexora-commerce-surya.kssuryaprakash2.chatgpt.site/${route}`;
+  const url = `https://nexora-web-virid.vercel.app/${route}`;
   return { title: `${title} | Nexora Commerce`, description, alternates: { canonical: url }, openGraph: { title: `${title} | Nexora Commerce`, description, url } };
 }
 

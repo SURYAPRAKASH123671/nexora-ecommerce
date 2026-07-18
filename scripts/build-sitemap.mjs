@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-const base = "https://nexora-commerce-surya.kssuryaprakash2.chatgpt.site";
+const base = "https://nexora-web-virid.vercel.app";
 const source = await readFile(new URL("../app/catalog.ts", import.meta.url), "utf8");
 const grocery = JSON.parse(await readFile(new URL("../premium-grocery-source.json", import.meta.url), "utf8"));
 const names = [...source.matchAll(/^\s+\["([^"]+)"/gm)].map((match) => match[1]);
