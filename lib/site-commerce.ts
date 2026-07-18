@@ -8,6 +8,9 @@ type CommerceEnv = {
   DB: D1Database;
   PAYMENT_PROOFS: R2Bucket;
   NEXORA_ADMIN_EMAILS?: string;
+  RAZORPAY_KEY_ID?: string;
+  RAZORPAY_KEY_SECRET?: string;
+  RAZORPAY_WEBHOOK_SECRET?: string;
 };
 
 export type SiteUser = { email: string; name: string; isAdmin: boolean };
@@ -18,6 +21,26 @@ export function commerceEnv(): CommerceEnv {
     throw new Error("Nexora storage is not configured.");
   }
   return bindings;
+}
+
+export function razorpayEnv(): Required<
+  Pick<
+    CommerceEnv,
+    "RAZORPAY_KEY_ID" | "RAZORPAY_KEY_SECRET" | "RAZORPAY_WEBHOOK_SECRET"
+  >
+> {
+  const bindings = commerceEnv();
+  if (
+    !bindings.RAZORPAY_KEY_ID?.startsWith("rzp_live_") ||
+    !bindings.RAZORPAY_KEY_SECRET ||
+    !bindings.RAZORPAY_WEBHOOK_SECRET
+  )
+    throw new HttpError(503, "Secure online payments are temporarily unavailable.");
+  return {
+    RAZORPAY_KEY_ID: bindings.RAZORPAY_KEY_ID,
+    RAZORPAY_KEY_SECRET: bindings.RAZORPAY_KEY_SECRET,
+    RAZORPAY_WEBHOOK_SECRET: bindings.RAZORPAY_WEBHOOK_SECRET,
+  };
 }
 
 export function requireSiteUser(request: Request): SiteUser {

@@ -92,6 +92,39 @@ export const orderHistory = sqliteTable(
   ],
 );
 
+export const razorpayPayments = sqliteTable(
+  "razorpay_payments",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    orderNumber: text("order_number").notNull(),
+    providerOrderId: text("provider_order_id").notNull(),
+    providerPaymentId: text("provider_payment_id"),
+    providerRefundId: text("provider_refund_id"),
+    amountPaise: integer("amount_paise").notNull(),
+    refundedAmountPaise: integer("refunded_amount_paise").notNull().default(0),
+    currency: text("currency").notNull().default("INR"),
+    status: text("status").notNull(),
+    failureCode: text("failure_code"),
+    failureDescription: text("failure_description"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("razorpay_payments_order_unique").on(table.orderNumber),
+    uniqueIndex("razorpay_payments_provider_order_unique").on(
+      table.providerOrderId,
+    ),
+    index("razorpay_payments_provider_payment_idx").on(
+      table.providerPaymentId,
+    ),
+    index("razorpay_payments_status_idx").on(table.status),
+  ],
+);
+
 export const catalogProducts = sqliteTable(
   "catalog_products",
   {

@@ -40,7 +40,30 @@ type OrderCreated = {
   status: string;
   paymentStatus: string;
   instructions?: UpiInstructions | null;
+  razorpay?: RazorpayCheckout | null;
 };
+type RazorpayCheckout = {
+  keyId: string;
+  providerOrderId: string;
+  amountPaise: number;
+  currency: "INR";
+  merchantName: string;
+  description: string;
+};
+type RazorpaySuccess = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => {
+      open: () => void;
+      on: (event: string, callback: (response: unknown) => void) => void;
+    };
+  }
+}
 type UpiInstructions = {
   orderNumber: string;
   amount: number;
@@ -1083,7 +1106,9 @@ function CheckoutView({
   onComplete: () => void;
   onMessage: (message: string) => void;
 }) {
-  const [paymentMethod, setPaymentMethod] = useState<"UPI" | "COD">("UPI");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "RAZORPAY" | "UPI" | "COD"
+  >("RAZORPAY");
   const [form, setForm] = useState({
     email: auth?.user.email ?? "",
     firstName: auth?.user.name.split(" ")[0] ?? "",
@@ -1118,6 +1143,104 @@ function CheckoutView({
 
   function field(name: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  async function loadRazorpayCheckout() {
+    if (window.Razorpay) return;
+    await new Promise<void>((resolve, reject) => {
+      const existing = document.querySelector<HTMLScriptElement>(
+        'script[src="https://checkout.razorpay.com/v1/checkout.js"]',
+      );
+      if (existing) {
+        existing.addEventListener("load", () => resolve(), { once: true });
+        existing.addEventListener(
+          "error",
+          () => reject(new Error("Secure checkout could not be loaded.")),
+          { once: true },
+        );
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () =>
+        reject(new Error("Secure checkout could not be loaded."));
+      document.head.appendChild(script);
+    });
+    if (!window.Razorpay)
+      throw new Error("Secure checkout is unavailable in this browser.");
+  }
+
+  async function verifyRazorpayPayment(
+    created: OrderCreated,
+    success: RazorpaySuccess,
+  ) {
+    const response = await fetch("/api/site/razorpay/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderNumber: created.orderNumber, ...success }),
+    });
+    if (!response.ok) throw new Error(await readApiError(response));
+    await response.json();
+    setSubmitted(true);
+    onComplete();
+    onMessage(`Payment verified for ${created.orderNumber}`);
+  }
+
+  async function cancelRazorpayPayment(orderNumber: string) {
+    await fetch("/api/site/razorpay/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderNumber }),
+    }).catch(() => undefined);
+  }
+
+  async function openRazorpay(created: OrderCreated) {
+    if (!created.razorpay)
+      throw new Error("Secure payment details were not created.");
+    await loadRazorpayCheckout();
+    const Checkout = window.Razorpay!;
+    const instance = new Checkout({
+      key: created.razorpay.keyId,
+      amount: created.razorpay.amountPaise,
+      currency: created.razorpay.currency,
+      name: created.razorpay.merchantName,
+      description: created.razorpay.description,
+      order_id: created.razorpay.providerOrderId,
+      prefill: {
+        name: `${form.firstName} ${form.lastName}`.trim(),
+        email: form.email,
+        contact: form.phone,
+      },
+      notes: { nexora_order_number: created.orderNumber },
+      theme: { color: "#165dff" },
+      retry: { enabled: true, max_count: 3 },
+      modal: {
+        confirm_close: true,
+        ondismiss: () => {
+          void cancelRazorpayPayment(created.orderNumber);
+          setError("Payment was cancelled. You can create a new secure attempt.");
+          setOrder(null);
+        },
+      },
+      handler: (success: RazorpaySuccess) => {
+        setBusy(true);
+        void verifyRazorpayPayment(created, success)
+          .catch((caught) =>
+            setError(
+              caught instanceof Error
+                ? caught.message
+                : "Payment verification failed.",
+            ),
+          )
+          .finally(() => setBusy(false));
+      },
+    });
+    instance.on("payment.failed", () => {
+      setError("The payment failed. No order was confirmed; please retry.");
+    });
+    instance.open();
   }
 
   async function createOrder() {
@@ -1175,6 +1298,11 @@ function CheckoutView({
       if (paymentMethod === "COD") {
         setSubmitted(true);
         onComplete();
+        return;
+      }
+      if (paymentMethod === "RAZORPAY") {
+        onMessage(`Secure checkout created for ${created.orderNumber}`);
+        await openRazorpay(created);
         return;
       }
       if (!created.instructions)
@@ -1244,12 +1372,16 @@ function CheckoutView({
           <h1>
             {paymentMethod === "UPI"
               ? "Payment pending verification"
-              : "Order placed"}
+              : paymentMethod === "RAZORPAY"
+                ? "Payment verified"
+                : "Order placed"}
           </h1>
           <p>
             {paymentMethod === "UPI"
               ? "Your screenshot was saved securely. We have not marked the payment successful—an administrator must verify it before the order is confirmed."
-              : "Your cash-on-delivery order has been created."}
+              : paymentMethod === "RAZORPAY"
+                ? "Razorpay confirmed the captured payment and Nexora verified its signature before confirming your order."
+                : "Your cash-on-delivery order has been created."}
           </p>
           {order && (
             <div className="order-reference">
@@ -1284,11 +1416,11 @@ function CheckoutView({
           <span className="eyebrow">Protected checkout</span>
           <h1>Complete your order</h1>
           <p>
-            The server calculates the final amount. UPI payments require human
-            verification.
+            The server calculates the final amount. Razorpay payments are
+            signature-verified before confirmation.
           </p>
         </div>
-        <span className="secure-label">♢ Manual verification</span>
+        <span className="secure-label">♢ Secure verified checkout</span>
       </div>
       <div className="checkout-layout">
         <div className="checkout-form">
@@ -1393,12 +1525,30 @@ function CheckoutView({
               <div>
                 <h2>Payment method</h2>
                 <p>
-                  Choose direct UPI with manual proof review or cash on
-                  delivery.
+                  Choose verified online payment, direct UPI with manual proof
+                  review, or cash on delivery.
                 </p>
               </div>
             </div>
             <div className="payment-options">
+              <label
+                className={
+                  paymentMethod === "RAZORPAY" ? "selected-payment" : ""
+                }
+              >
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === "RAZORPAY"}
+                  onChange={() => {
+                    setPaymentMethod("RAZORPAY");
+                    setOrder(null);
+                    setInstructions(null);
+                  }}
+                />
+                <span>Secure online payment</span>
+                <small>UPI, cards, net banking and supported wallets via Razorpay</small>
+              </label>
               <label
                 className={paymentMethod === "UPI" ? "selected-payment" : ""}
               >
@@ -1442,7 +1592,9 @@ function CheckoutView({
               >
                 {busy
                   ? "Creating secure reference…"
-                  : paymentMethod === "UPI"
+                  : paymentMethod === "RAZORPAY"
+                    ? `Pay securely · ${money.format(total)}`
+                    : paymentMethod === "UPI"
                     ? "Create UPI payment reference"
                     : `Place COD order · ${money.format(total)}`}
               </button>
