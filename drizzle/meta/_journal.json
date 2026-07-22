@@ -92,6 +92,20 @@
       "when": 1784378700000,
       "tag": "0012_nexora_customer_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1784715000000,
+      "tag": "0013_core_order_reliability",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1784725200000,
+      "tag": "0014_order_confirmation_notifications",
+      "breakpoints": true
     }
   ]
 }

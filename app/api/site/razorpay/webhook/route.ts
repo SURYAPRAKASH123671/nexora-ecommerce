@@ -1,5 +1,6 @@
 import { commerceEnv, errorResponse, HttpError } from "@/lib/site-commerce";
 import { verifyRazorpayWebhookSignature } from "@/lib/razorpay";
+import { deliverOrderConfirmation } from "@/lib/order-notifications";
 
 type RazorpayEntity = {
   id?: string;
@@ -61,9 +62,13 @@ export async function POST(request: Request) {
             "UPDATE orders SET payment_status = 'VERIFIED', order_status = 'CONFIRMED', updated_at = ? WHERE order_number = ? AND payment_status != 'REFUNDED'",
           ).bind(now, attempt.order_number),
           DB.prepare(
+            "UPDATE order_inventory_reservations SET status = 'CONSUMED', updated_at = ? WHERE order_number = ? AND status = 'RESERVED'",
+          ).bind(now, attempt.order_number),
+          DB.prepare(
             "INSERT INTO order_history (order_number, event_type, from_value, to_value, actor_email, note, created_at) VALUES (?, 'PAYMENT_STATUS', ?, 'VERIFIED', 'razorpay-webhook', ?, ?)",
           ).bind(attempt.order_number, attempt.status, event, now),
         ]);
+        await deliverOrderConfirmation(attempt.order_number);
       } else if (event === "payment.failed" && attempt.status !== "CAPTURED") {
         await DB.batch([
           DB.prepare(
@@ -77,6 +82,9 @@ export async function POST(request: Request) {
           ),
           DB.prepare(
             "UPDATE orders SET payment_status = 'FAILED', order_status = 'PAYMENT_FAILED', updated_at = ? WHERE order_number = ?",
+          ).bind(now, attempt.order_number),
+          DB.prepare(
+            "UPDATE order_inventory_reservations SET status = 'RELEASED', updated_at = ? WHERE order_number = ? AND status = 'RESERVED'",
           ).bind(now, attempt.order_number),
         ]);
       }
@@ -99,6 +107,9 @@ export async function POST(request: Request) {
             ).bind(refund.id, refund.amount, now, refundedAttempt.order_number),
             DB.prepare(
               "UPDATE orders SET payment_status = 'REFUNDED', order_status = 'REFUNDED', updated_at = ? WHERE order_number = ?",
+            ).bind(now, refundedAttempt.order_number),
+            DB.prepare(
+              "UPDATE order_inventory_reservations SET status = 'RELEASED', updated_at = ? WHERE order_number = ? AND status = 'CONSUMED'",
             ).bind(now, refundedAttempt.order_number),
           ]);
         else if (event === "refund.failed")

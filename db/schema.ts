@@ -42,6 +42,7 @@ export const orders = sqliteTable(
     paymentMethod: text("payment_method").notNull(),
     paymentStatus: text("payment_status").notNull(),
     orderStatus: text("order_status").notNull(),
+    idempotencyKey: text("idempotency_key"),
     subtotalPaise: integer("subtotal_paise").notNull(),
     shippingPaise: integer("shipping_paise").notNull(),
     totalPaise: integer("total_paise").notNull(),
@@ -59,6 +60,31 @@ export const orders = sqliteTable(
       table.createdAt,
     ),
     index("orders_status_idx").on(table.orderStatus),
+    uniqueIndex("orders_customer_idempotency_unique").on(
+      table.customerEmail,
+      table.idempotencyKey,
+    ),
+  ],
+);
+
+export const orderInventoryReservations = sqliteTable(
+  "order_inventory_reservations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    orderNumber: text("order_number").notNull(),
+    productId: integer("product_id").notNull(),
+    variantSku: text("variant_sku").notNull(),
+    quantity: integer("quantity").notNull(),
+    status: text("status").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("order_inventory_order_sku_unique").on(
+      table.orderNumber,
+      table.variantSku,
+    ),
+    index("order_inventory_status_idx").on(table.status),
   ],
 );
 
@@ -112,6 +138,28 @@ export const orderHistory = sqliteTable(
       table.orderNumber,
       table.createdAt,
     ),
+  ],
+);
+
+export const orderNotifications = sqliteTable(
+  "order_notifications",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    orderNumber: text("order_number").notNull(),
+    eventType: text("event_type").notNull(),
+    recipientEmail: text("recipient_email").notNull(),
+    status: text("status").notNull().default("PENDING"),
+    attempts: integer("attempts").notNull().default(0),
+    providerMessageId: text("provider_message_id"),
+    lastError: text("last_error"),
+    nextAttemptAt: text("next_attempt_at"),
+    sentAt: text("sent_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("order_notifications_event_unique").on(table.orderNumber, table.eventType),
+    index("order_notifications_retry_idx").on(table.status, table.nextAttemptAt),
   ],
 );
 

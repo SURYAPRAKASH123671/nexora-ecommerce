@@ -4,6 +4,7 @@ import {
   HttpError,
   requireAdmin,
 } from "@/lib/site-commerce";
+import { deliverOrderConfirmation } from "@/lib/order-notifications";
 
 type PaymentRow = {
   id: number;
@@ -52,6 +53,9 @@ export async function PATCH(request: Request) {
         "UPDATE orders SET payment_status = ?, order_status = ?, updated_at = ? WHERE order_number = ? AND order_status = 'PAYMENT_VERIFICATION_PENDING'",
       ).bind(paymentStatus, orderStatus, now, payment.order_number),
       DB.prepare(
+        `UPDATE order_inventory_reservations SET status = ?, updated_at = ? WHERE order_number = ? AND status = 'RESERVED'`,
+      ).bind(approved ? "CONSUMED" : "RELEASED", now, payment.order_number),
+      DB.prepare(
         "INSERT INTO order_history (order_number, event_type, from_value, to_value, actor_email, note, created_at) VALUES (?, 'PAYMENT_STATUS', ?, ?, ?, ?, ?)",
       ).bind(
         payment.order_number,
@@ -72,6 +76,7 @@ export async function PATCH(request: Request) {
         now,
       ),
     ]);
+    if (approved) await deliverOrderConfirmation(payment.order_number);
     return Response.json({
       paymentId,
       orderNumber: payment.order_number,

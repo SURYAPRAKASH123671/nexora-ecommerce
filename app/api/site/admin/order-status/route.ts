@@ -4,13 +4,7 @@ import {
   HttpError,
   requireAdmin,
 } from "@/lib/site-commerce";
-
-const nextStatus: Record<string, string> = {
-  CONFIRMED: "PACKED",
-  PACKED: "SHIPPED",
-  SHIPPED: "OUT_FOR_DELIVERY",
-  OUT_FOR_DELIVERY: "DELIVERED",
-};
+import { canTransitionOrder } from "@/lib/order-state";
 
 export async function PATCH(request: Request) {
   try {
@@ -32,7 +26,8 @@ export async function PATCH(request: Request) {
         409,
         "Fulfilment cannot advance before payment verification.",
       );
-    if (nextStatus[order.order_status] !== payload.status)
+    const requestedStatus = payload.status?.trim() ?? "";
+    if (!canTransitionOrder(order.order_status, requestedStatus))
       throw new HttpError(
         409,
         `Invalid order transition from ${order.order_status}.`,
@@ -41,12 +36,12 @@ export async function PATCH(request: Request) {
     await DB.batch([
       DB.prepare(
         "UPDATE orders SET order_status = ?, updated_at = ? WHERE order_number = ? AND order_status = ?",
-      ).bind(payload.status, now, orderNumber, order.order_status),
+      ).bind(requestedStatus, now, orderNumber, order.order_status),
       DB.prepare(
         "INSERT INTO order_history (order_number, event_type, from_value, to_value, actor_email, note, created_at) VALUES (?, 'ORDER_STATUS', ?, ?, ?, 'Updated by administrator', ?)",
-      ).bind(orderNumber, order.order_status, payload.status, admin.email, now),
+      ).bind(orderNumber, order.order_status, requestedStatus, admin.email, now),
     ]);
-    return Response.json({ orderNumber, orderStatus: payload.status });
+    return Response.json({ orderNumber, orderStatus: requestedStatus });
   } catch (error) {
     return errorResponse(error);
   }

@@ -12,6 +12,10 @@ type CommerceEnv = {
   RAZORPAY_KEY_ID?: string;
   RAZORPAY_KEY_SECRET?: string;
   RAZORPAY_WEBHOOK_SECRET?: string;
+  NEXORA_EMAIL_API_KEY?: string;
+  NEXORA_EMAIL_FROM?: string;
+  NEXORA_APP_URL?: string;
+  NEXORA_EMAIL_PREVIEW_ENABLED?: string;
 };
 
 export type SiteUser = { email: string; name: string; isAdmin: boolean };

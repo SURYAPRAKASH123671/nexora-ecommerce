@@ -510,3 +510,70 @@ test("Nexora uses first-party password authentication without provider redirects
   assert.match(register, /passwordHash/);
   assert.doesNotMatch(signIn, /signin-with-/);
 });
+
+test("login redirects customers to shop and payment cancellation remains recoverable", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const cancelUpi = await readFile(
+    new URL("../app/api/site/orders/cancel/route.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(page, /if \(!user\.isAdmin\) navigate\("catalog"\)/);
+  assert.match(page, /PAYMENT_CANCELLED/);
+  assert.match(page, /PAYMENT_FAILED/);
+  assert.match(page, /paymentInFlight\.current/);
+  assert.match(page, /ondismiss/);
+  assert.match(page, /Payment cancelled\. You can try again when you're ready\./);
+  assert.match(page, /Back to cart/);
+  assert.match(page, /Cancel payment/);
+  assert.match(cancelUpi, /payment_method !== "UPI"/);
+  assert.match(cancelUpi, /payment_status = 'CANCELLED'/);
+  assert.match(cancelUpi, /requireSiteUser/);
+});
+
+test("core order reliability provides idempotency, inventory settlement and customer timelines", async () => {
+  const orders = await readFile(new URL("../app/api/site/orders/route.ts", import.meta.url), "utf8");
+  const customerCancel = await readFile(new URL("../app/api/site/orders/customer-cancel/route.ts", import.meta.url), "utf8");
+  const webhook = await readFile(new URL("../app/api/site/razorpay/webhook/route.ts", import.meta.url), "utf8");
+  const migration = await readFile(new URL("../drizzle/0013_core_order_reliability.sql", import.meta.url), "utf8");
+  const lifecycle = await readFile(new URL("../lib/order-state.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.match(orders, /idempotency_key/);
+  assert.match(orders, /idempotentReplay/);
+  assert.match(orders, /export async function GET/);
+  assert.match(migration, /order_inventory_reservations/);
+  assert.match(migration, /INSUFFICIENT_STOCK/);
+  assert.match(webhook, /status = 'CONSUMED'/);
+  assert.match(webhook, /status = 'RELEASED'/);
+  assert.match(customerCancel, /customerCanCancel/);
+  assert.match(customerCancel, /customer_email !== user\.email/);
+  assert.match(lifecycle, /PROCESSING/);
+  assert.match(page, /Your orders/);
+  assert.match(page, /order-timeline/);
+});
+
+test("order dossier email is idempotent, payment-aware and failure-isolated", async () => {
+  const orders = await readFile(new URL("../app/api/site/orders/route.ts", import.meta.url), "utf8");
+  const verify = await readFile(new URL("../app/api/site/razorpay/verify/route.ts", import.meta.url), "utf8");
+  const review = await readFile(new URL("../app/api/site/admin/review/route.ts", import.meta.url), "utf8");
+  const notifications = await readFile(new URL("../lib/order-notifications.ts", import.meta.url), "utf8");
+  const template = await readFile(new URL("../lib/order-email-template.ts", import.meta.url), "utf8");
+  const migration = await readFile(new URL("../drizzle/0014_order_confirmation_notifications.sql", import.meta.url), "utf8");
+  const preview = await readFile(new URL("../app/api/site/admin/email-preview/route.ts", import.meta.url), "utf8");
+  assert.match(orders, /paymentMethod === "COD"\) await deliverOrderConfirmation/);
+  assert.match(orders, /paymentMethod === "COD" \? "CONFIRMED" : "PLACED"/);
+  assert.match(verify, /deliverOrderConfirmation/);
+  assert.match(review, /if \(approved\) await deliverOrderConfirmation/);
+  assert.match(migration, /UNIQUE INDEX `order_notifications_event_unique`/);
+  assert.match(notifications, /INSERT OR IGNORE INTO order_notifications/);
+  assert.match(notifications, /attempts < 3/);
+  assert.match(notifications, /Idempotency-Key/);
+  assert.match(notifications, /catch \(error\)/);
+  assert.match(template, /NEXORA ORDER PASSPORT/);
+  assert.match(template, /ORDER FINGERPRINT/);
+  assert.match(template, /No online payment has been collected/);
+  assert.match(template, /PAYMENT VERIFIED/);
+  assert.match(template, /renderOrderConfirmationText/);
+  assert.match(preview, /requireAdmin/);
+  assert.match(preview, /NEXORA_EMAIL_PREVIEW_ENABLED/);
+});

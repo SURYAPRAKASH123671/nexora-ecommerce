@@ -75,6 +75,15 @@ type AuthUser = {
   isAdmin: boolean;
 };
 type AuthSession = { user: AuthUser };
+type PaymentFlowState =
+  | "IDLE"
+  | "CREATING_ORDER"
+  | "PAYMENT_PENDING"
+  | "VERIFYING_PAYMENT"
+  | "PAYMENT_SUCCESS"
+  | "PAYMENT_CANCELLED"
+  | "PAYMENT_FAILED"
+  | "UPLOADING_PROOF";
 type SupportMessage = {
   id: string;
   sender_role: "CUSTOMER" | "AGENT" | "SYSTEM";
@@ -2023,6 +2032,7 @@ export default function Home({
             total={total}
             auth={auth}
             onAccount={() => navigate("account")}
+            onCart={() => navigate("cart")}
             onShop={() => navigate("catalog")}
             onComplete={() => setCart([])}
             onMessage={showNotice}
@@ -2035,7 +2045,10 @@ export default function Home({
             wishlistCount={wishlist.length}
             onShop={() => navigate("catalog")}
             onAction={openInfo}
-            onAuthenticated={(user) => setAuth({ user })}
+            onAuthenticated={(user) => {
+              setAuth({ user });
+              if (!user.isAdmin) navigate("catalog");
+            }}
           />
         )}
         {view === "admin" && (
@@ -2337,6 +2350,7 @@ function CheckoutView({
   total,
   auth,
   onAccount,
+  onCart,
   onShop,
   onComplete,
   onMessage,
@@ -2347,6 +2361,7 @@ function CheckoutView({
   total: number;
   auth: AuthSession | null;
   onAccount: () => void;
+  onCart: () => void;
   onShop: () => void;
   onComplete: () => void;
   onMessage: (message: string) => void;
@@ -2370,9 +2385,16 @@ function CheckoutView({
   );
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [payerReference, setPayerReference] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [paymentState, setPaymentState] = useState<PaymentFlowState>("IDLE");
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const paymentInFlight = useRef(false);
+  const checkoutIdempotencyKey = useRef("");
+  const busy = [
+    "CREATING_ORDER",
+    "VERIFYING_PAYMENT",
+    "UPLOADING_PROOF",
+  ].includes(paymentState);
 
   const screenshotPreview = useMemo(
     () => (screenshot ? URL.createObjectURL(screenshot) : ""),
@@ -2428,6 +2450,9 @@ function CheckoutView({
     });
     if (!response.ok) throw new Error(await readApiError(response));
     await response.json();
+    setPaymentState("PAYMENT_SUCCESS");
+    paymentInFlight.current = false;
+    checkoutIdempotencyKey.current = "";
     setSubmitted(true);
     onComplete();
     onMessage(`Payment verified for ${created.orderNumber}`);
@@ -2439,6 +2464,38 @@ function CheckoutView({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orderNumber }),
     }).catch(() => undefined);
+  }
+
+  async function cancelUpiPayment(orderNumber: string) {
+    const response = await fetch("/api/site/orders/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderNumber }),
+    });
+    if (!response.ok) throw new Error(await readApiError(response));
+  }
+
+  async function cancelCurrentPayment() {
+    if (paymentState === "CREATING_ORDER" || paymentState === "VERIFYING_PAYMENT")
+      return;
+    setError("");
+    try {
+      if (order?.paymentStatus === "PENDING" && instructions)
+        await cancelUpiPayment(order.orderNumber);
+      else if (order?.razorpay)
+        await cancelRazorpayPayment(order.orderNumber);
+      setPaymentState("PAYMENT_CANCELLED");
+      setOrder(null);
+      setInstructions(null);
+      setScreenshot(null);
+      setPayerReference("");
+      paymentInFlight.current = false;
+      checkoutIdempotencyKey.current = "";
+      onMessage("Payment cancelled. You can try again when you're ready.");
+    } catch (caught) {
+      setPaymentState("PAYMENT_FAILED");
+      setError(caught instanceof Error ? caught.message : "Payment cancellation could not be completed.");
+    }
   }
 
   async function openRazorpay(created: OrderCreated) {
@@ -2464,33 +2521,43 @@ function CheckoutView({
       modal: {
         confirm_close: true,
         ondismiss: () => {
-          void cancelRazorpayPayment(created.orderNumber);
-          setError(
-            "Payment was cancelled. You can create a new secure attempt.",
-          );
-          setOrder(null);
+          void cancelRazorpayPayment(created.orderNumber).finally(() => {
+            paymentInFlight.current = false;
+            checkoutIdempotencyKey.current = "";
+            setPaymentState("PAYMENT_CANCELLED");
+            setOrder(null);
+            setError("Payment cancelled. You can try again when you're ready.");
+          });
         },
       },
       handler: (success: RazorpaySuccess) => {
-        setBusy(true);
+        setPaymentState("VERIFYING_PAYMENT");
         void verifyRazorpayPayment(created, success)
-          .catch((caught) =>
+          .catch((caught) => {
+            paymentInFlight.current = false;
+            setPaymentState("PAYMENT_FAILED");
             setError(
               caught instanceof Error
                 ? caught.message
                 : "Payment verification failed.",
-            ),
-          )
-          .finally(() => setBusy(false));
+            );
+          });
       },
     });
     instance.on("payment.failed", () => {
-      setError("The payment failed. No order was confirmed; please retry.");
+      void cancelRazorpayPayment(created.orderNumber).finally(() => {
+        paymentInFlight.current = false;
+        checkoutIdempotencyKey.current = "";
+        setPaymentState("PAYMENT_FAILED");
+        setOrder(null);
+        setError("The payment failed. No order was confirmed; please retry.");
+      });
     });
     instance.open();
   }
 
   async function createOrder() {
+    if (paymentInFlight.current) return;
     setError("");
     if (!auth)
       return setError(
@@ -2509,7 +2576,10 @@ function CheckoutView({
         "Complete all delivery fields and enter a valid 5 or 6 digit PIN code.",
       );
     }
-    setBusy(true);
+    paymentInFlight.current = true;
+    if (!checkoutIdempotencyKey.current)
+      checkoutIdempotencyKey.current = crypto.randomUUID();
+    setPaymentState("CREATING_ORDER");
     try {
       const response = await fetch("/api/site/orders", {
         method: "POST",
@@ -2517,6 +2587,7 @@ function CheckoutView({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          idempotencyKey: checkoutIdempotencyKey.current,
           paymentMethod,
           deliveryAddress: {
             fullName: `${form.firstName} ${form.lastName}`.trim(),
@@ -2543,11 +2614,15 @@ function CheckoutView({
       const created = (await response.json()) as OrderCreated;
       setOrder(created);
       if (paymentMethod === "COD") {
+        paymentInFlight.current = false;
+        checkoutIdempotencyKey.current = "";
+        setPaymentState("PAYMENT_SUCCESS");
         setSubmitted(true);
         onComplete();
         return;
       }
       if (paymentMethod === "RAZORPAY") {
+        setPaymentState("PAYMENT_PENDING");
         onMessage(`Secure checkout created for ${created.orderNumber}`);
         await openRazorpay(created);
         return;
@@ -2555,15 +2630,17 @@ function CheckoutView({
       if (!created.instructions)
         throw new Error("UPI instructions were not created.");
       setInstructions(created.instructions);
+      paymentInFlight.current = false;
+      setPaymentState("PAYMENT_PENDING");
       onMessage(`Secure payment reference ${created.orderNumber} created`);
     } catch (caught) {
+      paymentInFlight.current = false;
+      setPaymentState("PAYMENT_FAILED");
       setError(
         caught instanceof Error
           ? caught.message
           : "The order service is unavailable.",
       );
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -2573,7 +2650,9 @@ function CheckoutView({
       return setError("Choose a payment screenshot before submitting.");
     if (screenshot.size > 5 * 1024 * 1024)
       return setError("Payment screenshots must be 5 MB or smaller.");
-    setBusy(true);
+    if (paymentInFlight.current) return;
+    paymentInFlight.current = true;
+    setPaymentState("UPLOADING_PROOF");
     try {
       const data = new FormData();
       data.append("orderNumber", order.orderNumber);
@@ -2586,16 +2665,19 @@ function CheckoutView({
       });
       if (!response.ok) throw new Error(await readApiError(response));
       await response.json();
+      paymentInFlight.current = false;
+      setPaymentState("PAYMENT_SUCCESS");
+      checkoutIdempotencyKey.current = "";
       setSubmitted(true);
       onComplete();
     } catch (caught) {
+      paymentInFlight.current = false;
+      setPaymentState("PAYMENT_FAILED");
       setError(
         caught instanceof Error
           ? caught.message
           : "The screenshot could not be submitted.",
       );
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -2787,6 +2869,7 @@ function CheckoutView({
                   type="radio"
                   name="payment"
                   checked={paymentMethod === "RAZORPAY"}
+                  disabled={busy || Boolean(order)}
                   onChange={() => {
                     setPaymentMethod("RAZORPAY");
                     setOrder(null);
@@ -2805,6 +2888,7 @@ function CheckoutView({
                   type="radio"
                   name="payment"
                   checked={paymentMethod === "UPI"}
+                  disabled={busy || Boolean(order)}
                   onChange={() => {
                     setPaymentMethod("UPI");
                     setOrder(null);
@@ -2823,6 +2907,7 @@ function CheckoutView({
                   type="radio"
                   name="payment"
                   checked={paymentMethod === "COD"}
+                  disabled={busy || Boolean(order)}
                   onChange={() => {
                     setPaymentMethod("COD");
                     setOrder(null);
@@ -2834,19 +2919,26 @@ function CheckoutView({
               </label>
             </div>
             {!order && (
-              <button
-                className="primary full-button"
-                disabled={busy || !auth}
-                onClick={createOrder}
-              >
-                {busy
-                  ? "Creating secure reference…"
-                  : paymentMethod === "RAZORPAY"
-                    ? `Pay securely · ${money.format(total)}`
-                    : paymentMethod === "UPI"
-                      ? "Create UPI payment reference"
-                      : `Place COD order · ${money.format(total)}`}
-              </button>
+              <div className="payment-actions">
+                <button className="secondary" disabled={busy} onClick={onCart}>
+                  Back to cart
+                </button>
+                <button
+                  className="primary"
+                  disabled={busy || !auth}
+                  onClick={createOrder}
+                >
+                  {busy
+                    ? paymentMethod === "RAZORPAY"
+                      ? "Processing payment…"
+                      : "Creating secure reference…"
+                    : paymentMethod === "RAZORPAY"
+                      ? `Pay securely · ${money.format(total)}`
+                      : paymentMethod === "UPI"
+                        ? "Create UPI payment reference"
+                        : `Place COD order · ${money.format(total)}`}
+                </button>
+              </div>
             )}
           </section>
           {instructions && (
@@ -2885,6 +2977,13 @@ function CheckoutView({
                   >
                     Pay via UPI App
                   </a>
+                  <button
+                    className="secondary upi-cancel-button"
+                    disabled={busy}
+                    onClick={() => void cancelCurrentPayment()}
+                  >
+                    Cancel payment
+                  </button>
                   <ol>
                     <li>
                       Pay exactly {money.format(Number(instructions.amount))}{" "}
@@ -2946,6 +3045,13 @@ function CheckoutView({
                   {busy
                     ? "Saving proof securely…"
                     : "Submit proof for verification"}
+                </button>
+                <button
+                  className="secondary full-button"
+                  disabled={busy}
+                  onClick={() => void cancelCurrentPayment()}
+                >
+                  Back to checkout / cancel payment
                 </button>
                 <p className="manual-warning">
                   A screenshot is evidence for review, not proof of settlement.
@@ -3754,6 +3860,39 @@ function AccountView({
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [orders, setOrders] = useState<Array<{
+    orderNumber: string; items: Array<{ name: string; quantity: number }>;
+    paymentStatus: string; orderStatus: string; total: number; createdAt: string;
+    history: Array<{ to_value: string; note: string | null; created_at: string }>;
+  }>>([]);
+  const [ordersBusy, setOrdersBusy] = useState(false);
+
+  async function loadOrders() {
+    if (!auth) return;
+    setOrdersBusy(true);
+    try {
+      const response = await fetch("/api/site/orders", { cache: "no-store" });
+      if (!response.ok) throw new Error(await readApiError(response));
+      const result = (await response.json()) as { orders: typeof orders };
+      setOrders(result.orders);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Orders could not be loaded.");
+    } finally {
+      setOrdersBusy(false);
+    }
+  }
+
+  useEffect(() => { void loadOrders(); }, [auth?.user.email]);
+
+  async function cancelCustomerOrder(orderNumber: string) {
+    if (!window.confirm(`Cancel ${orderNumber}? Reserved stock will be returned.`)) return;
+    const response = await fetch("/api/site/orders/customer-cancel", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderNumber }),
+    });
+    if (!response.ok) { setAuthError(await readApiError(response)); return; }
+    await loadOrders();
+  }
 
   async function submitAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -3834,7 +3973,7 @@ function AccountView({
             <label>Email<input name="email" type="email" autoComplete="email" required /></label>
             <label>Password<input name="password" type="password" autoComplete={authMode === "login" ? "current-password" : "new-password"} required minLength={10} maxLength={128} /><small>10 or more characters with a letter and number</small></label>
             {authError && <p className="form-error" role="alert">{authError}</p>}
-            <button className="primary" type="submit" disabled={authBusy}>{authBusy ? "Please wait…" : authMode === "login" ? "Sign in" : "Create account"}</button>
+            <button className="primary" type="submit" disabled={authBusy}>{authBusy ? authMode === "login" ? "Signing in…" : "Creating account…" : authMode === "login" ? "Sign in" : "Create account"}</button>
           </form>
         </div>
       )}
@@ -3898,6 +4037,21 @@ function AccountView({
           </button>
         </article>
       </div>
+      {auth && (
+        <section className="customer-orders">
+          <div className="section-heading"><div><span className="eyebrow">Order history</span><h2>Your orders</h2><p>Live payment and fulfilment updates from Nexora.</p></div><button onClick={() => void loadOrders()}>Refresh</button></div>
+          {ordersBusy ? <p>Loading orders…</p> : orders.length === 0 ? <p className="admin-empty">No orders yet.</p> : (
+            <div className="customer-order-list">{orders.map((order) => (
+              <article key={order.orderNumber}>
+                <div><small>{new Date(order.createdAt).toLocaleString("en-IN")}</small><h3>{order.orderNumber}</h3><p>{order.items.map((item) => `${item.name} × ${item.quantity}`).join(", ")}</p></div>
+                <div className="customer-order-summary"><strong>{money.format(order.total)}</strong><span>{order.orderStatus.replaceAll("_", " ")}</span><small>Payment: {order.paymentStatus.replaceAll("_", " ")}</small></div>
+                <ol className="order-timeline">{order.history.map((event, index) => <li key={`${event.created_at}-${index}`}><b>{event.to_value.replaceAll("_", " ")}</b><small>{event.note || new Date(event.created_at).toLocaleString("en-IN")}</small></li>)}</ol>
+                {["PLACED", "CONFIRMED", "PROCESSING", "PACKED"].includes(order.orderStatus) && order.paymentStatus !== "VERIFIED" && <button className="secondary" onClick={() => void cancelCustomerOrder(order.orderNumber)}>Cancel order</button>}
+              </article>
+            ))}</div>
+          )}
+        </section>
+      )}
     </section>
   );
 }
@@ -4595,12 +4749,12 @@ function AdminPaymentPanel({ auth }: { auth: AuthSession }) {
                     {payment.orderStatus === "CONFIRMED" && (
                       <button
                         className="secondary"
-                        onClick={() => advance(payment, "PACKED")}
+                        onClick={() => advance(payment, "PROCESSING")}
                       >
-                        Mark packed
+                        Start processing
                       </button>
                     )}
-                    {payment.orderStatus === "PACKED" && (
+                    {["PROCESSING", "PACKED"].includes(payment.orderStatus) && (
                       <button
                         className="secondary"
                         onClick={() => advance(payment, "SHIPPED")}
