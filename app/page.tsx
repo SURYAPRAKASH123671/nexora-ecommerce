@@ -100,6 +100,7 @@ type OrderCreated = {
   paymentStatus: string;
   instructions?: UpiInstructions | null;
   razorpay?: RazorpayCheckout | null;
+  hostedCheckout?: { gateway: "STRIPE" | "PAYPAL"; providerOrderId: string; checkoutUrl: string; currency: "INR" } | null;
 };
 type RazorpayCheckout = {
   keyId: string;
@@ -2346,7 +2347,7 @@ function CheckoutView({
   onMessage: (message: string) => void;
 }) {
   const [paymentMethod, setPaymentMethod] = useState<
-    "RAZORPAY" | "UPI" | "COD"
+    "RAZORPAY" | "STRIPE" | "PAYPAL" | "UPI" | "COD"
   >("RAZORPAY");
   const [form, setForm] = useState({
     email: auth?.user.email ?? "",
@@ -2386,6 +2387,19 @@ function CheckoutView({
     },
     [screenshotPreview],
   );
+
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const gateway = query.get("gateway")?.toUpperCase();
+    const orderNumber = query.get("order");
+    const providerOrderId = query.get("session_id") ?? query.get("token");
+    if (!auth || !orderNumber || !providerOrderId || (gateway !== "STRIPE" && gateway !== "PAYPAL")) return;
+    setPaymentMethod(gateway);
+    setPaymentState("VERIFYING_PAYMENT");
+    void fetch("/api/site/payments/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gateway, orderNumber, providerOrderId }) })
+      .then(async response => { if (!response.ok) throw new Error(await readApiError(response)); setOrder({ orderNumber, total, status: "CONFIRMED", paymentStatus: "VERIFIED" }); setSubmitted(true); setPaymentState("PAYMENT_SUCCESS"); onComplete(); window.history.replaceState({}, "", "/checkout"); })
+      .catch(caught => { setPaymentState("PAYMENT_FAILED"); setError(caught instanceof Error ? caught.message : "Payment verification failed."); });
+  }, [auth, onComplete, total]);
 
   function field(name: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -2606,6 +2620,11 @@ function CheckoutView({
         await openRazorpay(created);
         return;
       }
+      if ((paymentMethod === "STRIPE" || paymentMethod === "PAYPAL") && created.hostedCheckout) {
+        setPaymentState("PAYMENT_PENDING");
+        window.location.assign(created.hostedCheckout.checkoutUrl);
+        return;
+      }
       if (!created.instructions)
         throw new Error("UPI instructions were not created.");
       setInstructions(created.instructions);
@@ -2680,15 +2699,15 @@ function CheckoutView({
           <h1>
             {paymentMethod === "UPI"
               ? "Payment pending verification"
-              : paymentMethod === "RAZORPAY"
+              : ["RAZORPAY", "STRIPE", "PAYPAL"].includes(paymentMethod)
                 ? "Payment verified"
                 : "Order placed"}
           </h1>
           <p>
             {paymentMethod === "UPI"
               ? "Your screenshot was saved securely. We have not marked the payment successful—an administrator must verify it before the order is confirmed."
-              : paymentMethod === "RAZORPAY"
-                ? "Razorpay confirmed the captured payment and Nexora verified its signature before confirming your order."
+              : ["RAZORPAY", "STRIPE", "PAYPAL"].includes(paymentMethod)
+                ? `${paymentMethod === "RAZORPAY" ? "Razorpay" : paymentMethod === "STRIPE" ? "Stripe" : "PayPal"} confirmed the payment and Nexora verified it on the server before confirming your order.`
                 : "Your cash-on-delivery order has been created."}
           </p>
           {order && (
@@ -2724,8 +2743,8 @@ function CheckoutView({
           <span className="eyebrow">Protected checkout</span>
           <h1>Complete your order</h1>
           <p>
-            The server calculates the final amount. Razorpay payments are
-            signature-verified before confirmation.
+            The server calculates the final amount. Every online payment is
+            provider-verified before confirmation.
           </p>
         </div>
         <span className="secure-label">♢ Secure verified checkout</span>
@@ -2855,11 +2874,18 @@ function CheckoutView({
                     setInstructions(null);
                   }}
                 />
-                <span>Secure online payment</span>
+                <span>🇮🇳 Razorpay</span>
                 <small>
                   UPI, cards, net banking and supported wallets via Razorpay
                 </small>
               </label>
+              {(["STRIPE", "PAYPAL"] as const).map((gateway) => (
+                <label key={gateway} className={paymentMethod === gateway ? "selected-payment" : ""}>
+                  <input type="radio" name="payment" checked={paymentMethod === gateway} disabled={busy || Boolean(order)} onChange={() => { setPaymentMethod(gateway); setOrder(null); setInstructions(null); }} />
+                  <span>{gateway === "STRIPE" ? "🌍 Stripe" : "🌎 PayPal"}</span>
+                  <small>{gateway === "STRIPE" ? "Global card payments through Stripe Checkout" : "International payments using your PayPal account"}</small>
+                </label>
+              ))}
               <label
                 className={paymentMethod === "UPI" ? "selected-payment" : ""}
               >
@@ -2908,10 +2934,10 @@ function CheckoutView({
                   onClick={createOrder}
                 >
                   {busy
-                    ? paymentMethod === "RAZORPAY"
+                    ? ["RAZORPAY", "STRIPE", "PAYPAL"].includes(paymentMethod)
                       ? "Processing payment…"
                       : "Creating secure reference…"
-                    : paymentMethod === "RAZORPAY"
+                    : ["RAZORPAY", "STRIPE", "PAYPAL"].includes(paymentMethod)
                       ? `Pay securely · ${money.format(total)}`
                       : paymentMethod === "UPI"
                         ? "Create UPI payment reference"

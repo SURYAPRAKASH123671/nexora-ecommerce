@@ -12,11 +12,29 @@ type CommerceEnv = {
   RAZORPAY_KEY_ID?: string;
   RAZORPAY_KEY_SECRET?: string;
   RAZORPAY_WEBHOOK_SECRET?: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  PAYPAL_CLIENT_ID?: string;
+  PAYPAL_CLIENT_SECRET?: string;
+  PAYPAL_WEBHOOK_ID?: string;
+  PAYPAL_BASE_URL?: string;
   NEXORA_EMAIL_API_KEY?: string;
   NEXORA_EMAIL_FROM?: string;
   NEXORA_APP_URL?: string;
   NEXORA_EMAIL_PREVIEW_ENABLED?: string;
 };
+
+export function internationalPaymentEnv() {
+  const bindings = commerceEnv();
+  return {
+    STRIPE_SECRET_KEY: bindings.STRIPE_SECRET_KEY ?? "",
+    STRIPE_WEBHOOK_SECRET: bindings.STRIPE_WEBHOOK_SECRET ?? "",
+    PAYPAL_CLIENT_ID: bindings.PAYPAL_CLIENT_ID ?? "",
+    PAYPAL_CLIENT_SECRET: bindings.PAYPAL_CLIENT_SECRET ?? "",
+    PAYPAL_WEBHOOK_ID: bindings.PAYPAL_WEBHOOK_ID ?? "",
+    PAYPAL_BASE_URL: bindings.PAYPAL_BASE_URL ?? "https://api-m.sandbox.paypal.com",
+  };
+}
 
 export type SiteUser = { email: string; name: string; isAdmin: boolean };
 

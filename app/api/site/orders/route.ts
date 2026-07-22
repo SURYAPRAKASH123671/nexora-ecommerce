@@ -14,10 +14,11 @@ import { createRazorpayOrder } from "@/lib/razorpay";
 import { ensureCatalogSeeded } from "@/lib/catalog-store";
 import { deliverOrderConfirmation } from "@/lib/order-notifications";
 import { inventorySettlementStatements } from "@/lib/inventory-settlement";
+import { createPayPalCheckout, createStripeCheckout } from "@/lib/international-payments";
 
 type CheckoutPayload = {
   idempotencyKey?: string;
-  paymentMethod?: "UPI" | "COD" | "RAZORPAY";
+  paymentMethod?: "UPI" | "COD" | "RAZORPAY" | "STRIPE" | "PAYPAL";
   deliveryAddress?: {
     fullName?: string;
     email?: string;
@@ -208,7 +209,7 @@ export async function POST(request: Request) {
     const shippingPaise = subtotalPaise >= 500000 ? 0 : 9900;
     const totalPaise = subtotalPaise + shippingPaise;
     const orderNumber = `NX-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-    const paymentMethod = ["COD", "RAZORPAY"].includes(
+    const paymentMethod = ["COD", "RAZORPAY", "STRIPE", "PAYPAL"].includes(
       payload.paymentMethod ?? "",
     )
       ? payload.paymentMethod!
@@ -217,6 +218,12 @@ export async function POST(request: Request) {
     const providerOrder =
       paymentMethod === "RAZORPAY"
         ? await createRazorpayOrder(orderNumber, totalPaise)
+        : null;
+    const origin = new URL(request.url).origin;
+    const hostedCheckout = paymentMethod === "STRIPE"
+      ? await createStripeCheckout(orderNumber, totalPaise, user.email, origin)
+      : paymentMethod === "PAYPAL"
+        ? await createPayPalCheckout(orderNumber, totalPaise, origin)
         : null;
     if (
       providerOrder &&
@@ -239,6 +246,8 @@ export async function POST(request: Request) {
           ? "PENDING"
           : paymentMethod === "RAZORPAY"
             ? "PAYMENT_PENDING"
+            : hostedCheckout
+              ? "PAYMENT_PENDING"
             : "COD_PENDING",
         paymentMethod === "COD" ? "CONFIRMED" : "PLACED",
         idempotencyKey || null,
@@ -265,6 +274,12 @@ export async function POST(request: Request) {
         DB.prepare(
           "INSERT INTO razorpay_payments (order_number, provider_order_id, amount_paise, currency, status, created_at, updated_at) VALUES (?, ?, ?, 'INR', 'CREATED', ?, ?)",
         ).bind(orderNumber, providerOrder.id, totalPaise, now, now),
+      );
+    if (hostedCheckout)
+      statements.push(
+        DB.prepare(
+          "INSERT INTO gateway_payments (order_number, gateway, provider_order_id, amount_paise, currency, status, customer_id, created_at, updated_at) VALUES (?, ?, ?, ?, 'INR', 'PENDING', ?, ?, ?)",
+        ).bind(orderNumber, paymentMethod, hostedCheckout.providerOrderId, totalPaise, user.email, now, now),
       );
     for (const item of selectedItems)
       statements.push(
@@ -305,6 +320,8 @@ export async function POST(request: Request) {
             ? "PENDING"
             : paymentMethod === "RAZORPAY"
               ? "PAYMENT_PENDING"
+              : hostedCheckout
+                ? "PAYMENT_PENDING"
               : "COD_PENDING",
         instructions:
           paymentMethod === "UPI"
@@ -319,6 +336,7 @@ export async function POST(request: Request) {
               }
             : null,
         razorpay,
+        hostedCheckout: hostedCheckout ? { gateway: paymentMethod, ...hostedCheckout } : null,
       },
       { status: 201 },
     );
