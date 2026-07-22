@@ -500,7 +500,8 @@ test("Nexora uses first-party password authentication without provider redirects
   const register = await readFile(new URL("../app/api/site/auth/register/route.ts", import.meta.url), "utf8");
   const migration = await readFile(new URL("../drizzle/0012_nexora_customer_auth.sql", import.meta.url), "utf8");
   assert.match(commerce, /PBKDF2/);
-  assert.match(commerce, /210_000/);
+  assert.match(commerce, /PASSWORD_HASH_ITERATIONS = 100_000/);
+  assert.doesNotMatch(commerce, /210_000/);
   assert.match(commerce, /HttpOnly; Secure; SameSite=Strict/);
   assert.match(migration, /customer_accounts/);
   assert.match(migration, /customer_sessions/);
