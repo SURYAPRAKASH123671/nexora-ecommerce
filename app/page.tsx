@@ -253,7 +253,7 @@ export default function Home({
   );
   const [visualPreview, setVisualPreview] = useState("");
   const visualSearchInput = useRef<HTMLInputElement>(null);
-  const [supportMode, setSupportMode] = useState<"guide" | "support">("guide");
+  const [supportMode, setSupportMode] = useState<"guide" | "support">("support");
   const [supportLanguage, setSupportLanguage] = useState<"en" | "ta" | "hi">(
     "en",
   );
@@ -2072,12 +2072,15 @@ export default function Home({
 
       <button
         className="nexora-guide-launcher"
-        onClick={() => setGuideOpen(true)}
-        aria-label="Open Nexora help"
+        onClick={() => {
+          setSupportMode("support");
+          setGuideOpen(true);
+        }}
+        aria-label="Open customer support"
         aria-expanded={guideOpen}
       >
-        <Sparkles aria-hidden="true" />
-        <span>Ask Nexora</span>
+        <Headphones aria-hidden="true" />
+        <span>Customer Support</span>
       </button>
       {guideOpen && (
         <aside
@@ -2097,12 +2100,10 @@ export default function Home({
               </span>
               <div>
                 <small>
-                  {supportMode === "guide"
-                    ? "Explainable catalogue guidance"
-                    : "Protected customer support"}
+                  Protected customer support
                 </small>
                 <h2 id="nexora-guide-title">
-                  {supportMode === "guide" ? "Nexora Guide" : "Nexora Support"}
+                  Nexora Support
                 </h2>
               </div>
             </div>
@@ -2113,28 +2114,6 @@ export default function Home({
               <X aria-hidden="true" />
             </button>
           </header>
-          <div className="support-mode-tabs" role="tablist">
-            <button
-              role="tab"
-              aria-selected={supportMode === "guide"}
-              onClick={() => setSupportMode("guide")}
-            >
-              <Sparkles />
-              Product finder
-            </button>
-            <button
-              role="tab"
-              aria-selected={supportMode === "support"}
-              onClick={() =>
-                supportConversationId
-                  ? setSupportMode("support")
-                  : startSupportConversation()
-              }
-            >
-              <Headphones />
-              Message support
-            </button>
-          </div>
           {supportMode === "guide" ? (
             <>
               {visualPreview && (
