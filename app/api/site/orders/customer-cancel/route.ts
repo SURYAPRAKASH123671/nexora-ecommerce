@@ -1,5 +1,6 @@
 import { commerceEnv, errorResponse, HttpError, requireSiteUser } from "@/lib/site-commerce";
 import { customerCanCancel } from "@/lib/order-state";
+import { inventorySettlementStatements } from "@/lib/inventory-settlement";
 
 export async function POST(request: Request) {
   try {
@@ -21,8 +22,8 @@ export async function POST(request: Request) {
     await DB.batch([
       DB.prepare("UPDATE orders SET order_status = 'ORDER_CANCELLED', payment_status = CASE WHEN payment_method = 'COD' THEN 'COD_CANCELLED' ELSE payment_status END, updated_at = ? WHERE order_number = ? AND order_status = ?")
         .bind(now, body.orderNumber, order.order_status),
-      DB.prepare("UPDATE order_inventory_reservations SET status = 'RELEASED', updated_at = ? WHERE order_number = ? AND status IN ('RESERVED', 'CONSUMED')")
-        .bind(now, body.orderNumber),
+      ...inventorySettlementStatements(DB, body.orderNumber, "RESERVED", "RELEASED", now),
+      ...inventorySettlementStatements(DB, body.orderNumber, "CONSUMED", "RELEASED", now),
       DB.prepare("INSERT INTO order_history (order_number, event_type, from_value, to_value, actor_email, note, created_at) VALUES (?, 'ORDER_STATUS', ?, 'ORDER_CANCELLED', ?, ?, ?)")
         .bind(body.orderNumber, order.order_status, user.email, reason, now),
     ]);

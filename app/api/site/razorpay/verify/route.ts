@@ -9,6 +9,7 @@ import {
   verifyRazorpayPaymentSignature,
 } from "@/lib/razorpay";
 import { deliverOrderConfirmation } from "@/lib/order-notifications";
+import { inventorySettlementStatements } from "@/lib/inventory-settlement";
 
 type VerifyPayload = {
   orderNumber?: string;
@@ -69,9 +70,7 @@ export async function POST(request: Request) {
       DB.prepare(
         "UPDATE orders SET payment_status = 'VERIFIED', order_status = 'CONFIRMED', updated_at = ? WHERE order_number = ?",
       ).bind(now, body.orderNumber),
-      DB.prepare(
-        "UPDATE order_inventory_reservations SET status = 'CONSUMED', updated_at = ? WHERE order_number = ? AND status = 'RESERVED'",
-      ).bind(now, body.orderNumber),
+      ...inventorySettlementStatements(DB, body.orderNumber, "RESERVED", "CONSUMED", now),
       DB.prepare(
         "INSERT INTO order_history (order_number, event_type, from_value, to_value, actor_email, note, created_at) VALUES (?, 'PAYMENT_STATUS', ?, 'VERIFIED', ?, 'Razorpay signature and captured payment verified', ?)",
       ).bind(body.orderNumber, payment.status, user.email, now),

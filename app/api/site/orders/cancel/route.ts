@@ -4,6 +4,7 @@ import {
   HttpError,
   requireSiteUser,
 } from "@/lib/site-commerce";
+import { inventorySettlementStatements } from "@/lib/inventory-settlement";
 
 export async function POST(request: Request) {
   try {
@@ -35,9 +36,7 @@ export async function POST(request: Request) {
       DB.prepare(
         "UPDATE orders SET payment_status = 'CANCELLED', order_status = 'PAYMENT_CANCELLED', updated_at = ? WHERE order_number = ? AND payment_status = 'PENDING' AND order_status = 'PLACED'",
       ).bind(now, body.orderNumber),
-      DB.prepare(
-        "UPDATE order_inventory_reservations SET status = 'RELEASED', updated_at = ? WHERE order_number = ? AND status = 'RESERVED'",
-      ).bind(now, body.orderNumber),
+      ...inventorySettlementStatements(DB, body.orderNumber, "RESERVED", "RELEASED", now),
       DB.prepare(
         "INSERT INTO order_history (order_number, event_type, from_value, to_value, actor_email, note, created_at) VALUES (?, 'PAYMENT_STATUS', 'PENDING', 'CANCELLED', ?, 'Customer cancelled direct UPI checkout before proof submission', ?)",
       ).bind(body.orderNumber, user.email, now),

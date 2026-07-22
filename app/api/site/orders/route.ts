@@ -13,6 +13,7 @@ import {
 import { createRazorpayOrder } from "@/lib/razorpay";
 import { ensureCatalogSeeded } from "@/lib/catalog-store";
 import { deliverOrderConfirmation } from "@/lib/order-notifications";
+import { inventorySettlementStatements } from "@/lib/inventory-settlement";
 
 type CheckoutPayload = {
   idempotencyKey?: string;
@@ -270,13 +271,12 @@ export async function POST(request: Request) {
         DB.prepare(
           "INSERT INTO order_inventory_reservations (order_number, product_id, variant_sku, quantity, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'RESERVED', ?, ?)",
         ).bind(orderNumber, item.productId, item.variantSku, item.quantity, now, now),
+        DB.prepare(
+          "UPDATE product_inventory SET reserved_quantity = reserved_quantity + ?, updated_at = ? WHERE variant_sku = ? AND available_quantity - reserved_quantity >= ?",
+        ).bind(item.quantity, now, item.variantSku, item.quantity),
       );
     if (paymentMethod === "COD")
-      statements.push(
-        DB.prepare(
-          "UPDATE order_inventory_reservations SET status = 'CONSUMED', updated_at = ? WHERE order_number = ? AND status = 'RESERVED'",
-        ).bind(now, orderNumber),
-      );
+      statements.push(...inventorySettlementStatements(DB, orderNumber, "RESERVED", "CONSUMED", now));
     try {
       await DB.batch(statements);
     } catch (error) {

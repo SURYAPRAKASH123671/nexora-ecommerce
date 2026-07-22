@@ -5,6 +5,7 @@ import {
   requireAdmin,
 } from "@/lib/site-commerce";
 import { deliverOrderConfirmation } from "@/lib/order-notifications";
+import { inventorySettlementStatements } from "@/lib/inventory-settlement";
 
 type PaymentRow = {
   id: number;
@@ -52,9 +53,7 @@ export async function PATCH(request: Request) {
       DB.prepare(
         "UPDATE orders SET payment_status = ?, order_status = ?, updated_at = ? WHERE order_number = ? AND order_status = 'PAYMENT_VERIFICATION_PENDING'",
       ).bind(paymentStatus, orderStatus, now, payment.order_number),
-      DB.prepare(
-        `UPDATE order_inventory_reservations SET status = ?, updated_at = ? WHERE order_number = ? AND status = 'RESERVED'`,
-      ).bind(approved ? "CONSUMED" : "RELEASED", now, payment.order_number),
+      ...inventorySettlementStatements(DB, payment.order_number, "RESERVED", approved ? "CONSUMED" : "RELEASED", now),
       DB.prepare(
         "INSERT INTO order_history (order_number, event_type, from_value, to_value, actor_email, note, created_at) VALUES (?, 'PAYMENT_STATUS', ?, ?, ?, ?, ?)",
       ).bind(
